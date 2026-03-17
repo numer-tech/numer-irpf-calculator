@@ -56,3 +56,8 @@
 
 - [x] Diagnosticar e corrigir erro de login com e-mail e senha
 - [x] Testar login e salvar checkpoint
+
+# TODO - Correção: Valores Iniciais das Fichas
+
+- [x] Corrigir todas as fichas para iniciar com quantidade 0
+- [x] Testar e salvar checkpoint
