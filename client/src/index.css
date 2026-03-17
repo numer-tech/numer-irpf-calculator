@@ -40,12 +40,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-empresa: var(--empresa-primary);
+  --color-empresa-secondary: var(--empresa-secondary);
+  --color-empresa-text: var(--empresa-text-primary);
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --font-heading: 'Sora', system-ui, sans-serif;
 }
 
 :root {
-  /* Numer Contabilidade - Orange Identity */
+  /* Empresa defaults - overridden by EmpresaThemeInjector */
+  --empresa-primary: #F97316;
+  --empresa-secondary: #FB923C;
+  --empresa-text-primary: #FFFFFF;
+
   --primary: oklch(0.7 0.18 55);
   --primary-foreground: oklch(1 0 0);
   --sidebar-primary: oklch(0.65 0.19 55);
@@ -135,6 +142,21 @@
   }
 }
 
+/* Empresa-themed utility classes */
+.bg-empresa { background-color: var(--empresa-primary); }
+.bg-empresa-secondary { background-color: var(--empresa-secondary); }
+.text-empresa { color: var(--empresa-primary); }
+.text-empresa-on { color: var(--empresa-text-primary); }
+.border-empresa { border-color: var(--empresa-primary); }
+.bg-empresa-light { background-color: color-mix(in srgb, var(--empresa-primary) 10%, white); }
+.bg-empresa-lighter { background-color: color-mix(in srgb, var(--empresa-primary) 5%, white); }
+.border-empresa-light { border-color: color-mix(in srgb, var(--empresa-primary) 20%, white); }
+.text-empresa-dark { color: color-mix(in srgb, var(--empresa-primary) 100%, black 20%); }
+.ring-empresa { --tw-ring-color: color-mix(in srgb, var(--empresa-primary) 30%, white); }
+.focus-empresa:focus { border-color: color-mix(in srgb, var(--empresa-primary) 50%, white); }
+.hover-empresa:hover { background-color: color-mix(in srgb, var(--empresa-primary) 8%, white); }
+.gradient-empresa { background: linear-gradient(135deg, var(--empresa-primary), var(--empresa-secondary)); }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -143,11 +165,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.8 0.05 55);
+  background: color-mix(in srgb, var(--empresa-primary) 30%, #ccc);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.7 0.1 55);
+  background: color-mix(in srgb, var(--empresa-primary) 50%, #ccc);
 }
 
 /* Print styles for proposal */

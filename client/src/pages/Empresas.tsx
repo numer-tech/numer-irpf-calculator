@@ -112,7 +112,7 @@ function EmpresaUsuariosPanel({ empresa }: { empresa: any }) {
                   <input
                     type="text" value={newUser.nome}
                     onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
-                    className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-orange-200"
+                    className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-300"
                     placeholder="Nome completo"
                   />
                 </div>
@@ -121,7 +121,7 @@ function EmpresaUsuariosPanel({ empresa }: { empresa: any }) {
                   <select
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "user" | "admin" })}
-                    className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-orange-200"
+                    className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-300"
                   >
                     <option value="user">Usuário</option>
                     <option value="admin">Admin</option>
@@ -133,7 +133,7 @@ function EmpresaUsuariosPanel({ empresa }: { empresa: any }) {
                 <input
                   type="email" value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-orange-200"
+                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-300"
                   placeholder="email@empresa.com.br"
                 />
               </div>
@@ -144,7 +144,7 @@ function EmpresaUsuariosPanel({ empresa }: { empresa: any }) {
                     type={showPassword ? "text" : "password"}
                     value={newUser.senha}
                     onChange={(e) => setNewUser({ ...newUser, senha: e.target.value })}
-                    className="w-full px-2 py-1.5 pr-8 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-orange-200"
+                    className="w-full px-2 py-1.5 pr-8 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-300"
                     placeholder="Senha de acesso"
                   />
                   <button
@@ -179,7 +179,7 @@ function EmpresaUsuariosPanel({ empresa }: { empresa: any }) {
         {/* Lista de usuários */}
         {usuariosQuery.isLoading ? (
           <div className="text-center py-4">
-            <div className="w-5 h-5 border-2 border-gray-200 border-t-orange-400 rounded-full animate-spin mx-auto" />
+            <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin mx-auto" />
           </div>
         ) : usuarios.length === 0 ? (
           <div className="text-center py-4 text-xs text-gray-400">
@@ -260,7 +260,7 @@ function EmpresaUsuariosPanel({ empresa }: { empresa: any }) {
                               value={newSenha}
                               onChange={(e) => setNewSenha(e.target.value)}
                               placeholder="Mín. 6 caracteres"
-                              className="w-full px-2 py-1.5 pr-7 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-orange-200"
+                              className="w-full px-2 py-1.5 pr-7 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-gray-300"
                             />
                             <button
                               type="button"
@@ -341,7 +341,7 @@ export default function Empresas() {
         <div className="text-center space-y-4">
           <Building2 className="w-12 h-12 text-gray-300 mx-auto" />
           <p className="text-gray-500">Acesso restrito ao super administrador.</p>
-          <button onClick={() => navigate("/")} className="text-sm text-orange-500 hover:underline">
+          <button onClick={() => navigate("/")} className="text-sm text-empresa hover:underline">
             Voltar ao início
           </button>
         </div>
@@ -478,7 +478,7 @@ export default function Empresas() {
                     <input
                       type={type} value={(form as any)[key]}
                       onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                       placeholder={placeholder}
                     />
                   </div>
@@ -540,7 +540,7 @@ export default function Empresas() {
                         <input
                           type="text" value={adminForm.adminNome}
                           onChange={(e) => setAdminForm({ ...adminForm, adminNome: e.target.value })}
-                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                           placeholder="Nome completo"
                         />
                       </div>
@@ -552,7 +552,7 @@ export default function Empresas() {
                         <input
                           type="email" value={adminForm.adminEmail}
                           onChange={(e) => setAdminForm({ ...adminForm, adminEmail: e.target.value })}
-                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                           placeholder="admin@empresa.com.br"
                         />
                       </div>
@@ -565,7 +565,7 @@ export default function Empresas() {
                           type={showAdminPassword ? "text" : "password"}
                           value={adminForm.adminSenha}
                           onChange={(e) => setAdminForm({ ...adminForm, adminSenha: e.target.value })}
-                          className="w-full pl-9 pr-10 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                          className="w-full pl-9 pr-10 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                           placeholder="Mínimo 6 caracteres"
                         />
                         <button type="button" onClick={() => setShowAdminPassword(!showAdminPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">

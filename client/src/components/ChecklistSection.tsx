@@ -1,6 +1,6 @@
 /*
  * ChecklistSection - Fichas Oficiais do IRPF agrupadas por categoria
- * Identidade: Numer Contabilidade (laranja, branco, cinza)
+ * Cores dinâmicas via CSS variables da empresa (white label)
  */
 
 import { Minus, Plus } from "lucide-react";
@@ -34,20 +34,20 @@ interface ChecklistSectionProps {
   itensPreco: ItemPrecoConfig[];
 }
 
-// Ícone e cor para cada ficha oficial
+// Ícone e cor para cada ficha oficial - usando cores semânticas (não orange hardcoded)
 const fichaVisuals: Record<keyof ChecklistState, { icon: React.ReactNode; color: string; bg: string }> = {
-  dependentes: { icon: <Users className="w-4 h-4" />, color: "text-orange-600", bg: "bg-orange-100" },
+  dependentes: { icon: <Users className="w-4 h-4" />, color: "text-empresa", bg: "bg-empresa-light" },
   alimentandos: { icon: <Heart className="w-4 h-4" />, color: "text-rose-600", bg: "bg-rose-100" },
-  rendTribPJ: { icon: <Building2 className="w-4 h-4" />, color: "text-orange-700", bg: "bg-orange-100" },
+  rendTribPJ: { icon: <Building2 className="w-4 h-4" />, color: "text-empresa-dark", bg: "bg-empresa-light" },
   rendTribPFExterior: { icon: <Globe className="w-4 h-4" />, color: "text-amber-700", bg: "bg-amber-100" },
   rendimentosIsentos: { icon: <Gift className="w-4 h-4" />, color: "text-green-700", bg: "bg-green-100" },
-  rendTributacaoExclusiva: { icon: <TrendingDown className="w-4 h-4" />, color: "text-orange-600", bg: "bg-orange-100" },
+  rendTributacaoExclusiva: { icon: <TrendingDown className="w-4 h-4" />, color: "text-empresa", bg: "bg-empresa-light" },
   rendExigibilidadeSuspensa: { icon: <Landmark className="w-4 h-4" />, color: "text-amber-600", bg: "bg-amber-100" },
-  rendRecebidosAcumuladamente: { icon: <ReceiptText className="w-4 h-4" />, color: "text-orange-700", bg: "bg-orange-100" },
+  rendRecebidosAcumuladamente: { icon: <ReceiptText className="w-4 h-4" />, color: "text-empresa-dark", bg: "bg-empresa-light" },
   impostoPagoRetido: { icon: <CreditCard className="w-4 h-4" />, color: "text-gray-700", bg: "bg-gray-100" },
-  pagamentosEfetuados: { icon: <HandCoins className="w-4 h-4" />, color: "text-orange-600", bg: "bg-orange-100" },
+  pagamentosEfetuados: { icon: <HandCoins className="w-4 h-4" />, color: "text-empresa", bg: "bg-empresa-light" },
   doacoesEfetuadas: { icon: <Gift className="w-4 h-4" />, color: "text-amber-600", bg: "bg-amber-100" },
-  bensEDireitos: { icon: <Home className="w-4 h-4" />, color: "text-orange-700", bg: "bg-orange-100" },
+  bensEDireitos: { icon: <Home className="w-4 h-4" />, color: "text-empresa-dark", bg: "bg-empresa-light" },
   dividasOnus: { icon: <AlertTriangle className="w-4 h-4" />, color: "text-red-600", bg: "bg-red-100" },
   espolio: { icon: <Scale className="w-4 h-4" />, color: "text-gray-600", bg: "bg-gray-100" },
   doacoesPartidos: { icon: <Vote className="w-4 h-4" />, color: "text-blue-600", bg: "bg-blue-100" },
@@ -57,9 +57,9 @@ const fichaVisuals: Record<keyof ChecklistState, { icon: React.ReactNode; color:
 const grupoVisuals: Record<GrupoFicha, { icon: React.ReactNode; color: string; bg: string; border: string }> = {
   "Rendimentos Tributáveis": {
     icon: <Banknote className="w-3.5 h-3.5" />,
-    color: "text-orange-700",
-    bg: "bg-orange-50",
-    border: "border-orange-200",
+    color: "text-empresa-dark",
+    bg: "bg-empresa-lighter",
+    border: "border-empresa-light",
   },
   "Rendimentos Isentos e Especiais": {
     icon: <BadgeDollarSign className="w-3.5 h-3.5" />,
@@ -146,7 +146,7 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                   )}
                 </div>
                 {grupoSubtotal > 0 && (
-                  <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2.5 py-1 rounded-full">
+                  <span className="text-xs font-semibold text-empresa bg-empresa-light px-2.5 py-1 rounded-full">
                     {formatCurrency(grupoSubtotal)}
                   </span>
                 )}
@@ -171,7 +171,7 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                   <div
                     key={item.key}
                     className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${
-                      isActive ? "bg-orange-50/40" : "hover:bg-gray-50/50"
+                      isActive ? "bg-empresa-lighter" : "hover:bg-gray-50/50"
                     }`}
                   >
                     {/* Número sequencial */}
@@ -194,7 +194,7 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {formatCurrency(item.precoUnitario)} {item.descricaoUnidade}
                         {isActive && (
-                          <span className="text-orange-600 font-semibold ml-1.5">
+                          <span className="text-empresa font-semibold ml-1.5">
                             — {formatCurrency(subtotal)}
                           </span>
                         )}
@@ -206,7 +206,7 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 rounded-lg border-gray-200 hover:border-orange-300 hover:bg-orange-50 disabled:opacity-30"
+                        className="h-7 w-7 rounded-lg border-gray-200 hover:border-empresa-light hover-empresa disabled:opacity-30"
                         onClick={() => onChange(item.key, Math.max(0, qty - 1) as any)}
                         disabled={qty <= 0}
                       >
@@ -214,7 +214,7 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                       </Button>
                       <div
                         className={`w-10 h-7 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
-                          isActive ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-400"
+                          isActive ? "bg-empresa text-empresa-on" : "bg-gray-100 text-gray-400"
                         }`}
                       >
                         {qty}
@@ -222,7 +222,7 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 rounded-lg border-gray-200 hover:border-orange-300 hover:bg-orange-50"
+                        className="h-7 w-7 rounded-lg border-gray-200 hover:border-empresa-light hover-empresa"
                         onClick={() => onChange(item.key, (qty + 1) as any)}
                       >
                         <Plus className="w-3 h-3" />

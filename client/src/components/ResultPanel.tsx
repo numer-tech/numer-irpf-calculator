@@ -1,6 +1,6 @@
 /*
  * ResultPanel - Painel lateral de resultado em tempo real
- * Design: Valor base + itens detalhados + descontos + complexidade + fichas
+ * Cores dinâmicas via CSS variables da empresa (white label)
  */
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,8 +50,8 @@ const complexityColors: Record<ComplexityLevel, { bar: string; badge: string }> 
     badge: "bg-amber-100 text-amber-700 border-amber-200",
   },
   complexo: {
-    bar: "bg-orange-500",
-    badge: "bg-orange-100 text-orange-700 border-orange-200",
+    bar: "bg-empresa",
+    badge: "bg-empresa-light text-empresa-dark border-empresa-light",
   },
   muito_complexo: {
     bar: "bg-red-500",
@@ -94,8 +94,8 @@ export default function ResultPanel({
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Header com valor total */}
-      <div className="relative px-5 py-5 bg-gradient-to-br from-orange-500 to-amber-500 text-white overflow-hidden">
+      {/* Header com valor total - cores dinâmicas da empresa */}
+      <div className="relative px-5 py-5 gradient-empresa text-empresa-on overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/20" />
           <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-white/10" />
@@ -103,7 +103,7 @@ export default function ResultPanel({
         <div className="relative">
           <div className="flex items-center gap-2 mb-3">
             <Gauge className="w-4 h-4" />
-            <span className="text-xs font-medium text-white/80 uppercase tracking-wider">
+            <span className="text-xs font-medium opacity-80 uppercase tracking-wider">
               Resultado do Orçamento
             </span>
           </div>
@@ -119,7 +119,7 @@ export default function ResultPanel({
             {formatCurrency(valorFinal)}
           </motion.div>
 
-          <div className="flex items-center gap-3 mt-2 text-xs text-white/70 flex-wrap">
+          <div className="flex items-center gap-3 mt-2 text-xs opacity-70 flex-wrap">
             <span>Base: {formatCurrency(resultado.valorBase)}</span>
             <span>+</span>
             <span>Itens: {formatCurrency(resultado.valorItens)}</span>
@@ -144,7 +144,7 @@ export default function ResultPanel({
               variant="outline"
               size="sm"
               onClick={() => adjustValue(-50)}
-              className="h-8 w-8 p-0 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
+              className="h-8 w-8 p-0 border-gray-200 hover:border-empresa-light hover-empresa"
             >
               <Minus className="w-3.5 h-3.5" />
             </Button>
@@ -159,14 +159,14 @@ export default function ResultPanel({
                   const val = parseFloat(e.target.value);
                   onValorChange(isNaN(val) ? 0 : val);
                 }}
-                className="h-8 text-sm pl-9 text-center bg-gray-50/50 border-gray-200 focus:border-orange-300"
+                className="h-8 text-sm pl-9 text-center bg-gray-50/50 border-gray-200 focus-empresa"
               />
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => adjustValue(50)}
-              className="h-8 w-8 p-0 border-gray-200 hover:border-orange-200 hover:bg-orange-50"
+              className="h-8 w-8 p-0 border-gray-200 hover:border-empresa-light hover-empresa"
             >
               <Plus className="w-3.5 h-3.5" />
             </Button>
@@ -174,7 +174,7 @@ export default function ResultPanel({
           {valorAjustado !== null && (
             <button
               onClick={() => onValorChange(null)}
-              className="text-[11px] text-orange-500 hover:text-orange-600 mt-1.5 underline underline-offset-2"
+              className="text-[11px] text-empresa hover:opacity-80 mt-1.5 underline underline-offset-2"
             >
               Restaurar valor calculado ({formatCurrency(resultado.valorTotal)})
             </button>
@@ -258,16 +258,16 @@ export default function ResultPanel({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 10 }}
                     transition={{ duration: 0.2 }}
-                    className="flex items-center justify-between text-xs py-1.5 px-2.5 bg-orange-50/50 rounded-md"
+                    className="flex items-center justify-between text-xs py-1.5 px-2.5 bg-empresa-lighter rounded-md"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-empresa shrink-0" />
                       <span className="text-gray-600 truncate">{item.label}</span>
                       <span className="text-gray-400 shrink-0">
                         {item.quantidade}x {formatCurrency(item.precoUnitario)}
                       </span>
                     </div>
-                    <span className="font-semibold text-orange-700 ml-2 shrink-0">
+                    <span className="font-semibold text-empresa-dark ml-2 shrink-0">
                       {formatCurrency(item.subtotal)}
                     </span>
                   </motion.div>
@@ -291,9 +291,9 @@ export default function ResultPanel({
                 </motion.div>
               ))}
               {/* Total */}
-              <div className="flex items-center justify-between text-xs py-2 px-2.5 bg-orange-100/60 rounded-md border border-orange-200/50 mt-1">
+              <div className="flex items-center justify-between text-xs py-2 px-2.5 bg-empresa-light rounded-md border border-empresa-light mt-1">
                 <span className="font-semibold text-gray-700">Total calculado</span>
-                <span className="font-bold text-orange-700">{formatCurrency(resultado.valorTotal)}</span>
+                <span className="font-bold text-empresa-dark">{formatCurrency(resultado.valorTotal)}</span>
               </div>
             </div>
           </div>
@@ -343,7 +343,7 @@ export default function ResultPanel({
                   transition={{ duration: 0.2 }}
                   className="flex items-center gap-2 text-xs text-gray-600 py-1.5 px-2.5 bg-gray-50 rounded-md"
                 >
-                  <div className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-empresa shrink-0" />
                   {ficha}
                 </motion.div>
               ))}
@@ -357,7 +357,7 @@ export default function ResultPanel({
         <div className="space-y-2">
           <Button
             onClick={onGerarProposta}
-            className="w-full h-11 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold text-sm shadow-md shadow-orange-200/50 gap-2"
+            className="w-full h-11 text-white font-semibold text-sm shadow-md gap-2 gradient-empresa hover:opacity-90"
           >
             <FileCheck className="w-4 h-4" />
             Gerar Proposta
@@ -369,7 +369,7 @@ export default function ResultPanel({
               onClick={onSalvar}
               disabled={isSaving}
               variant="outline"
-              className="w-full h-10 border-orange-200 text-orange-700 hover:bg-orange-50 hover:border-orange-300 font-medium text-sm gap-2"
+              className="w-full h-10 border-empresa-light text-empresa-dark hover-empresa font-medium text-sm gap-2"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -43,7 +43,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto" />
+          <Loader2 className="w-8 h-8 animate-spin text-empresa mx-auto" />
           <p className="text-sm text-gray-500">Carregando...</p>
         </div>
       </div>

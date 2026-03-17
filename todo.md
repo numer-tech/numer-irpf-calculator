@@ -128,3 +128,10 @@
 
 - [x] Corrigir servidor Express para servir index.html em todas as rotas SPA (incluindo query params)
 - [x] Testar e salvar checkpoint
+
+# TODO - Bug Fix: Isolamento Multi-Tenant
+
+- [x] Investigar e corrigir cores da empresa 1 aparecendo na empresa 2
+- [x] Investigar e corrigir orçamentos da empresa 2 não aparecendo
+- [x] Verificar todas as páginas para garantir isolamento de dados por empresa
+- [x] Testar e salvar checkpoint

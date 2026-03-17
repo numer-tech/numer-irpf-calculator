@@ -3,6 +3,7 @@
  * 1. Preços (valor base + preço unitário por ficha)
  * 2. Descontos (criar, editar, remover descontos configuráveis)
  * 3. Proposta (formas de pagamento, prazo, condições, observações)
+ * Cores dinâmicas via CSS variables da empresa (white label)
  */
 
 import { useState } from "react";
@@ -92,7 +93,7 @@ export default function SettingsPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-amber-50/50">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 bg-empresa-lighter">
           <div>
             <DialogTitle
               className="text-lg font-bold text-gray-900"
@@ -128,9 +129,9 @@ export default function SettingsPanel({
             {/* === ABA PREÇOS === */}
             <TabsContent value="precos" className="p-6 space-y-6 mt-0">
               {/* Valor base */}
-              <div className="bg-orange-50 rounded-xl border border-orange-100 p-4">
+              <div className="bg-empresa-lighter rounded-xl border border-empresa-light p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Package className="w-4 h-4 text-orange-600" />
+                  <Package className="w-4 h-4 text-empresa" />
                   <h3 className="text-sm font-semibold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
                     Valor Base da Declaração
                   </h3>
@@ -149,7 +150,7 @@ export default function SettingsPanel({
                       const val = parseFloat(e.target.value);
                       if (!isNaN(val) && val >= 0) onUpdateValorBase(val);
                     }}
-                    className="w-32 h-9 text-sm text-center bg-white border-orange-200 focus:border-orange-400 font-semibold"
+                    className="w-32 h-9 text-sm text-center bg-white border-empresa-light focus-empresa font-semibold"
                   />
                 </div>
               </div>
@@ -159,7 +160,7 @@ export default function SettingsPanel({
               {/* Preços unitários */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="w-4 h-4 text-orange-600" />
+                  <DollarSign className="w-4 h-4 text-empresa" />
                   <h3 className="text-sm font-semibold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
                     Preço Unitário por Ficha
                   </h3>
@@ -195,7 +196,7 @@ export default function SettingsPanel({
                               const val = parseFloat(e.target.value);
                               if (!isNaN(val) && val >= 0) onUpdateItemPreco(item.key, val);
                             }}
-                            className="w-20 h-7 text-xs text-center bg-white border-gray-200 focus:border-orange-300"
+                            className="w-20 h-7 text-xs text-center bg-white border-gray-200 focus-empresa"
                           />
                         </div>
                         <div className="col-span-3 text-right">
@@ -256,8 +257,8 @@ export default function SettingsPanel({
                       <Input
                         value={desc.descricao}
                         onChange={(e) => onUpdateDesconto(desc.id, { descricao: e.target.value })}
-                        placeholder="Ex: Desconto cliente fidelidade"
-                        className="h-8 text-sm border-gray-200 focus:border-green-300"
+                        placeholder="Ex: Desconto fidelidade"
+                        className="h-8 text-sm border-gray-200 focus-empresa"
                       />
                     </div>
 
@@ -336,8 +337,6 @@ export default function SettingsPanel({
                   />
                 </div>
 
-
-
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">
                     Validade da Proposta
@@ -362,10 +361,6 @@ export default function SettingsPanel({
                     className="text-sm border-gray-200 focus:border-blue-300 resize-none"
                   />
                 </div>
-
-
-
-
               </div>
             </TabsContent>
           </ScrollArea>
@@ -377,7 +372,7 @@ export default function SettingsPanel({
             variant="outline"
             size="sm"
             onClick={handleResetConfig}
-            className="text-gray-500 hover:text-orange-600 hover:border-orange-200 gap-1.5"
+            className="text-gray-500 hover:text-empresa hover:border-empresa-light gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Restaurar Padrão
@@ -388,7 +383,7 @@ export default function SettingsPanel({
               onOpenChange(false);
               toast.success("Configurações salvas!");
             }}
-            className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5"
+            className="bg-empresa hover:opacity-90 text-empresa-on gap-1.5"
           >
             <Save className="w-3.5 h-3.5" />
             Fechar e Salvar

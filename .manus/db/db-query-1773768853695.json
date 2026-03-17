@@ -1,0 +1,28 @@
+{
+  "query": "SELECT o.id, o.clienteNome, o.empresaId, o.criadoPor, u.nome as criadorNome, u.empresaId as userEmpresaId, u.role FROM orcamentos o LEFT JOIN internalUsers u ON o.criadoPor = u.id ORDER BY o.id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2c6X8ZdMLfMorTw.a9d38e417b6c --database hrYkQ7rTK4s8DYQBoB2Kee --execute SELECT o.id, o.clienteNome, o.empresaId, o.criadoPor, u.nome as criadorNome, u.empresaId as userEmpresaId, u.role FROM orcamentos o LEFT JOIN internalUsers u ON o.criadoPor = u.id ORDER BY o.id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "60001",
+      "clienteNome": "teste am ",
+      "empresaId": "2",
+      "criadoPor": "30001",
+      "criadorNome": "ANDERSON MAISSE",
+      "userEmpresaId": "2",
+      "role": "admin"
+    },
+    {
+      "id": "30003",
+      "clienteNome": "LUANA MOREIRA",
+      "empresaId": "1",
+      "criadoPor": "1",
+      "criadorNome": "Higor Araujo",
+      "userEmpresaId": "1",
+      "role": "superadmin"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tclienteNome\tempresaId\tcriadoPor\tcriadorNome\tuserEmpresaId\trole\n60001\tteste am \t2\t30001\tANDERSON MAISSE\t2\tadmin\n30003\tLUANA MOREIRA\t1\t1\tHigor Araujo\t1\tsuperadmin\n",
+  "stderr": "",
+  "execution_time_ms": 70
+}

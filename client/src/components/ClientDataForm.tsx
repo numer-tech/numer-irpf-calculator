@@ -1,7 +1,7 @@
 /*
  * ClientDataForm - Formulário de dados do cliente
  * Campos obrigatórios: Nome, CPF, Telefone
- * Sem campo de e-mail
+ * Cores dinâmicas via CSS variables da empresa
  */
 
 import { User, Phone, FileText } from "lucide-react";
@@ -32,10 +32,10 @@ function formatPhone(value: string): string {
 export default function ClientDataForm({ data, onChange }: ClientDataFormProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-5 py-3.5 bg-gradient-to-r from-orange-50 to-amber-50/50 border-b border-orange-100/50">
+      <div className="px-5 py-3.5 bg-empresa-lighter border-b border-empresa-light">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
-            <User className="w-3.5 h-3.5 text-orange-600" />
+          <div className="w-7 h-7 rounded-lg bg-empresa-light flex items-center justify-center">
+            <User className="w-3.5 h-3.5 text-empresa" />
           </div>
           <h2 className="text-sm font-semibold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
             Dados do Cliente
@@ -56,7 +56,7 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
               placeholder="Nome do cliente"
               value={data.nome}
               onChange={(e) => onChange("nome", e.target.value)}
-              className="h-9 text-sm bg-gray-50/50 border-gray-200 focus:border-orange-300 focus:ring-orange-200"
+              className="h-9 text-sm bg-gray-50/50 border-gray-200 focus-empresa"
               required
             />
           </div>
@@ -71,7 +71,7 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
               placeholder="000.000.000-00"
               value={data.cpf}
               onChange={(e) => onChange("cpf", formatCPF(e.target.value))}
-              className="h-9 text-sm bg-gray-50/50 border-gray-200 focus:border-orange-300 focus:ring-orange-200"
+              className="h-9 text-sm bg-gray-50/50 border-gray-200 focus-empresa"
               required
             />
           </div>
@@ -86,7 +86,7 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
               placeholder="(00) 00000-0000"
               value={data.telefone}
               onChange={(e) => onChange("telefone", formatPhone(e.target.value))}
-              className="h-9 text-sm bg-gray-50/50 border-gray-200 focus:border-orange-300 focus:ring-orange-200"
+              className="h-9 text-sm bg-gray-50/50 border-gray-200 focus-empresa"
               required
             />
           </div>

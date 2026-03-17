@@ -107,7 +107,7 @@ export default function MinhaEmpresa() {
         <div className="text-center space-y-4">
           <Building2 className="w-12 h-12 text-gray-300 mx-auto" />
           <p className="text-gray-500">Acesso restrito a administradores.</p>
-          <button onClick={() => navigate("/")} className="text-sm text-orange-500 hover:underline">
+          <button onClick={() => navigate("/")} className="text-sm text-empresa hover:underline">
             Voltar ao início
           </button>
         </div>

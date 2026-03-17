@@ -180,7 +180,7 @@ export default function Usuarios() {
       />
 
       {/* Hero */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-400 to-amber-400">
+      <div className="relative overflow-hidden gradient-empresa">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/30" />
           <div className="absolute left-1/3 -bottom-10 w-60 h-60 rounded-full bg-white/20" />
@@ -220,8 +220,8 @@ export default function Usuarios() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
-              <Users className="w-5 h-5 text-orange-500" />
+            <div className="w-10 h-10 rounded-xl bg-empresa-lighter flex items-center justify-center">
+              <Users className="w-5 h-5 text-empresa" />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-800">{totalUsuarios}</p>
@@ -256,7 +256,7 @@ export default function Usuarios() {
             </h3>
             <Button
               onClick={() => setShowCreate(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white gap-2 h-9 text-sm"
+              className="bg-empresa hover:opacity-90 text-empresa-on gap-2 h-9 text-sm"
             >
               <UserPlus className="w-4 h-4" />
               Novo usuário
@@ -265,7 +265,7 @@ export default function Usuarios() {
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-empresa" />
             </div>
           ) : !usuarios || usuarios.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
@@ -281,7 +281,7 @@ export default function Usuarios() {
                   className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-semibold text-sm flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-empresa-light flex items-center justify-center text-empresa font-semibold text-sm flex-shrink-0">
                       {u.nome.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -314,7 +314,7 @@ export default function Usuarios() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-gray-400 hover:text-orange-500"
+                        className="h-7 w-7 text-gray-400 hover:text-empresa"
                         title="Editar"
                         onClick={() => {
                           setEditUser(u);
@@ -412,7 +412,7 @@ export default function Usuarios() {
             <Button
               onClick={handleCreate}
               disabled={createMutation.isPending}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="bg-empresa hover:opacity-90 text-empresa-on"
             >
               {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Criar usuário"}
             </Button>
@@ -480,7 +480,7 @@ export default function Usuarios() {
             <Button
               onClick={handleEdit}
               disabled={updateMutation.isPending}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="bg-empresa hover:opacity-90 text-empresa-on"
             >
               {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
             </Button>
@@ -523,7 +523,7 @@ export default function Usuarios() {
             <Button
               onClick={handleResetSenha}
               disabled={resetSenhaMutation.isPending}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="bg-empresa hover:opacity-90 text-empresa-on"
             >
               {resetSenhaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Redefinir senha"}
             </Button>
