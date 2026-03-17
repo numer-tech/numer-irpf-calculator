@@ -15,7 +15,7 @@ if (!DATABASE_URL) {
 
 const nome = "Higor Araujo";
 const email = "higor@numer.com.br";
-const senha = "Numer@2026";
+const senha = "numer2026";
 const role = "admin";
 
 const passwordHash = await bcrypt.hash(senha, 12);

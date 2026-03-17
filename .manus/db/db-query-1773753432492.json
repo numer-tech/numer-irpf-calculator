@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, nome, email, role, ativo, passwordHash FROM internalUsers;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2c6X8ZdMLfMorTw.a9d38e417b6c --database hrYkQ7rTK4s8DYQBoB2Kee --execute SELECT id, nome, email, role, ativo, passwordHash FROM internalUsers;",
+  "rows": [
+    {
+      "id": "1",
+      "nome": "Higor Araujo",
+      "email": "higor@numer.com.br",
+      "role": "admin",
+      "ativo": "1",
+      "passwordHash": "$2b$12$qzcjxtZdnzfchBiKvZa9H.QvQnVao/4/h2Wmuintsw/oRO0TLDxka"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnome\temail\trole\tativo\tpasswordHash\n1\tHigor Araujo\thigor@numer.com.br\tadmin\t1\t$2b$12$qzcjxtZdnzfchBiKvZa9H.QvQnVao/4/h2Wmuintsw/oRO0TLDxka\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

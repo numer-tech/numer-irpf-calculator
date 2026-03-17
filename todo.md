@@ -51,3 +51,8 @@
 - [x] Proteger todas as rotas com a nova autenticação
 - [x] Atualizar testes vitest
 - [x] Testar e salvar checkpoint
+
+# TODO - Correção de Bug: Erro de Login
+
+- [x] Diagnosticar e corrigir erro de login com e-mail e senha
+- [x] Testar login e salvar checkpoint
