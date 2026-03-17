@@ -2,6 +2,7 @@
  * Historico - Página de histórico de orçamentos
  * Admin vê todos os orçamentos (com nome do criador)
  * Usuário comum vê apenas os seus próprios
+ * Inclui: Visualizar orçamento, Gerar Proposta, Comprovante, Excluir
  */
 
 import { useState, useRef, useMemo } from "react";
@@ -48,7 +49,10 @@ import {
   AlertCircle,
   ShieldCheck,
   Users,
+  FileSignature,
 } from "lucide-react";
+import ProposalView from "@/components/ProposalView";
+import type { ClientData, CalculationResult } from "@/hooks/useIRPFCalculator";
 
 const LOGO_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
@@ -105,6 +109,41 @@ function formatDate(date: Date | string): string {
   });
 }
 
+// Reconstrói ClientData e CalculationResult a partir do orçamento salvo no banco
+function buildProposalData(orc: any): {
+  clientData: ClientData;
+  resultado: CalculationResult;
+  valorFinal: number;
+} {
+  const clientData: ClientData = {
+    nome: orc.clienteNome || "",
+    cpf: orc.clienteCpf || "",
+    telefone: orc.clienteTelefone || "",
+    email: orc.clienteEmail || "",
+  };
+
+  const savedResultado = orc.resultado as any;
+
+  const resultado: CalculationResult = {
+    nivel: savedResultado?.nivel || "simples",
+    nivelLabel: savedResultado?.nivelLabel || "Simples",
+    valorBase: savedResultado?.valorBase || 0,
+    valorItens: savedResultado?.valorItens || 0,
+    valorTotal: savedResultado?.valorTotal || 0,
+    totalItens: savedResultado?.totalItens || 0,
+    totalFichas: savedResultado?.totalFichas || 0,
+    lineItems: savedResultado?.lineItems || [],
+    fichasIdentificadas: savedResultado?.fichasIdentificadas || [],
+  };
+
+  const valorFinal =
+    typeof orc.valorFinal === "string"
+      ? parseFloat(orc.valorFinal)
+      : orc.valorFinal || resultado.valorTotal;
+
+  return { clientData, resultado, valorFinal };
+}
+
 export default function Historico() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -113,6 +152,7 @@ export default function Historico() {
   const [creatorFilter, setCreatorFilter] = useState<string>("todos");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const [proposalOrc, setProposalOrc] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user?.role === "admin";
@@ -266,6 +306,19 @@ export default function Historico() {
           </Button>
         </div>
       </div>
+    );
+  }
+
+  // Se está visualizando uma proposta de um orçamento salvo
+  if (proposalOrc) {
+    const { clientData, resultado, valorFinal } = buildProposalData(proposalOrc);
+    return (
+      <ProposalView
+        clientData={clientData}
+        resultado={resultado}
+        valorFinal={valorFinal}
+        onBack={() => setProposalOrc(null)}
+      />
     );
   }
 
@@ -546,7 +599,18 @@ export default function Historico() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Gerar Proposta */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setProposalOrc(orc)}
+                            className="h-8 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                          >
+                            <FileSignature className="w-3.5 h-3.5" />
+                            Proposta
+                          </Button>
+
                           {/* Comprovante */}
                           {orc.comprovanteUrl ? (
                             <Button
@@ -558,7 +622,7 @@ export default function Historico() {
                               className="h-8 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                             >
                               <Eye className="w-3.5 h-3.5" />
-                              Ver Comprovante
+                              Comprovante
                             </Button>
                           ) : (
                             <Button

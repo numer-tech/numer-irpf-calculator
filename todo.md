@@ -61,3 +61,9 @@
 
 - [x] Corrigir todas as fichas para iniciar com quantidade 0
 - [x] Testar e salvar checkpoint
+
+# TODO - Visualizar e Gerar Proposta no Histórico
+
+- [x] Adicionar botão "Visualizar" e "Gerar Proposta" na listagem do histórico
+- [x] Reconstruir dados do orçamento salvo para exibir no ProposalView
+- [x] Testar e salvar checkpoint
