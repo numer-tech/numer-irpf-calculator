@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `internalUsers` MODIFY COLUMN `role` enum('user','admin','superadmin') NOT NULL DEFAULT 'user';\nALTER TABLE `internalUsers` ADD COLUMN `empresaId` int;\nALTER TABLE `orcamentos` ADD COLUMN `empresaId` int;\nALTER TABLE `internalUsers` ADD CONSTRAINT `internalUsers_empresaId_empresas_id_fk` FOREIGN KEY (`empresaId`) REFERENCES `empresas`(`id`) ON DELETE no action ON UPDATE no action;\nALTER TABLE `orcamentos` ADD CONSTRAINT `orcamentos_empresaId_empresas_id_fk` FOREIGN KEY (`empresaId`) REFERENCES `empresas`(`id`) ON DELETE no action ON UPDATE no action",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2c6X8ZdMLfMorTw.a9d38e417b6c --database hrYkQ7rTK4s8DYQBoB2Kee --execute ALTER TABLE `internalUsers` MODIFY COLUMN `role` enum('user','admin','superadmin') NOT NULL DEFAULT 'user';\nALTER TABLE `internalUsers` ADD COLUMN `empresaId` int;\nALTER TABLE `orcamentos` ADD COLUMN `empresaId` int;\nALTER TABLE `internalUsers` ADD CONSTRAINT `internalUsers_empresaId_empresas_id_fk` FOREIGN KEY (`empresaId`) REFERENCES `empresas`(`id`) ON DELETE no action ON UPDATE no action;\nALTER TABLE `orcamentos` ADD CONSTRAINT `orcamentos_empresaId_empresas_id_fk` FOREIGN KEY (`empresaId`) REFERENCES `empresas`(`id`) ON DELETE no action ON UPDATE no action",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 7185
+}

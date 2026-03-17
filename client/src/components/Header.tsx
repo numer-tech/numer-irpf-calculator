@@ -1,11 +1,9 @@
 /*
- * Header - Numer Contabilidade
- * Design: Corporate Dashboard Moderno
- * Cores: Laranja (#F57C20), branco, cinza claro
- * Tipografia: Sora (heading)
+ * Header - White Label
+ * Usa cores e logo da empresa do tenant logado
  */
 
-import { Calculator, RotateCcw, Settings, History, LogOut, ShieldCheck, User, Users } from "lucide-react";
+import { Calculator, RotateCcw, Settings, History, LogOut, ShieldCheck, Users, Building2, Crown } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { EmpresaData } from "@/hooks/useInternalAuth";
 
-const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
+const DEFAULT_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 
 interface HeaderProps {
   onReset: () => void;
@@ -25,6 +24,7 @@ interface HeaderProps {
   userName?: string | null;
   userRole?: string | null;
   onLogout?: () => void;
+  empresa?: EmpresaData | null;
 }
 
 export default function Header({
@@ -34,8 +34,10 @@ export default function Header({
   userName,
   userRole,
   onLogout,
+  empresa,
 }: HeaderProps) {
-  const isAdmin = userRole === "admin";
+  const isAdmin = userRole === "admin" || userRole === "superadmin";
+  const isSuperAdmin = userRole === "superadmin";
   const [, navigate] = useLocation();
   const displayName = userName || "Usuário";
   const initials = displayName
@@ -45,21 +47,26 @@ export default function Header({
     .join("")
     .toUpperCase();
 
+  const logoUrl = empresa?.logoUrl || DEFAULT_LOGO;
+  const empresaNome = empresa?.nome || "Calculadora IRPF";
+  const corPrimaria = empresa?.corPrimaria || "#F97316";
+  const corTextoPrimaria = empresa?.corTextoPrimaria || "#FFFFFF";
+
   return (
-    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100/60">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/60">
       <div className="container flex items-center justify-between h-16">
         <div className="flex items-center gap-3">
           <img
-            src={LOGO_URL}
-            alt="Numer Contabilidade"
-            className="h-10 w-10 rounded-lg"
+            src={logoUrl}
+            alt={empresaNome}
+            className="h-10 w-10 rounded-lg object-contain"
           />
           <div>
             <h1
               className="text-lg font-bold text-gray-900 leading-tight"
               style={{ fontFamily: "'Sora', sans-serif" }}
             >
-              Numer Contabilidade
+              {empresaNome}
             </h1>
             <p className="text-xs text-gray-500 -mt-0.5">
               Calculadora de Orçamento IRPF 2026
@@ -68,17 +75,22 @@ export default function Header({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Badge admin/uso interno */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 rounded-full">
-            {isAdmin ? (
+          {/* Badge role */}
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ backgroundColor: `${corPrimaria}15` }}>
+            {isSuperAdmin ? (
               <>
-                <ShieldCheck className="w-3.5 h-3.5 text-orange-600" />
-                <span className="text-xs font-medium text-orange-700">Admin</span>
+                <Crown className="w-3.5 h-3.5" style={{ color: corPrimaria }} />
+                <span className="text-xs font-medium" style={{ color: corPrimaria }}>Super Admin</span>
+              </>
+            ) : isAdmin ? (
+              <>
+                <ShieldCheck className="w-3.5 h-3.5" style={{ color: corPrimaria }} />
+                <span className="text-xs font-medium" style={{ color: corPrimaria }}>Admin</span>
               </>
             ) : (
               <>
-                <Calculator className="w-3.5 h-3.5 text-orange-600" />
-                <span className="text-xs font-medium text-orange-700">Uso Interno</span>
+                <Calculator className="w-3.5 h-3.5" style={{ color: corPrimaria }} />
+                <span className="text-xs font-medium" style={{ color: corPrimaria }}>Uso Interno</span>
               </>
             )}
           </div>
@@ -88,7 +100,8 @@ export default function Header({
               variant="outline"
               size="sm"
               onClick={onOpenHistorico}
-              className="text-gray-500 hover:text-orange-600 hover:border-orange-200 gap-1.5"
+              className="text-gray-500 gap-1.5"
+              style={{ ["--hover-color" as any]: corPrimaria }}
             >
               <History className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Histórico</span>
@@ -98,7 +111,7 @@ export default function Header({
             variant="outline"
             size="sm"
             onClick={onOpenSettings}
-            className="text-gray-500 hover:text-orange-600 hover:border-orange-200 gap-1.5"
+            className="text-gray-500 gap-1.5"
           >
             <Settings className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Configurar Valores</span>
@@ -107,7 +120,7 @@ export default function Header({
             variant="outline"
             size="sm"
             onClick={onReset}
-            className="text-gray-500 hover:text-orange-600 hover:border-orange-200 gap-1.5"
+            className="text-gray-500 gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Novo Orçamento</span>
@@ -117,7 +130,10 @@ export default function Header({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 h-9 px-2 rounded-lg hover:bg-gray-100 transition-colors ml-1">
-                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{ backgroundColor: corPrimaria, color: corTextoPrimaria }}
+                >
                   {initials}
                 </div>
                 <span className="hidden md:block text-sm text-gray-700 font-medium max-w-[120px] truncate">
@@ -129,8 +145,11 @@ export default function Header({
               <div className="px-3 py-2">
                 <p className="text-sm font-medium text-gray-900">{displayName}</p>
                 <p className="text-xs text-gray-500">
-                  {isAdmin ? "Administrador" : "Usuário"}
+                  {isSuperAdmin ? "Super Administrador" : isAdmin ? "Administrador" : "Usuário"}
                 </p>
+                {empresa && (
+                  <p className="text-xs text-gray-400 mt-0.5">{empresa.nome}</p>
+                )}
               </div>
               <DropdownMenuSeparator />
               {isAdmin && (
@@ -140,6 +159,24 @@ export default function Header({
                 >
                   <Users className="w-4 h-4" />
                   Gerenciar Usuários
+                </DropdownMenuItem>
+              )}
+              {isAdmin && !isSuperAdmin && (
+                <DropdownMenuItem
+                  onClick={() => navigate("/minha-empresa")}
+                  className="gap-2"
+                >
+                  <Building2 className="w-4 h-4" />
+                  Minha Empresa
+                </DropdownMenuItem>
+              )}
+              {isSuperAdmin && (
+                <DropdownMenuItem
+                  onClick={() => navigate("/empresas")}
+                  className="gap-2"
+                >
+                  <Building2 className="w-4 h-4" />
+                  Gerenciar Empresas
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

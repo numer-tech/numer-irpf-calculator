@@ -19,15 +19,64 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
- * Usuários internos da Numer Contabilidade (autenticação própria com e-mail e senha).
+ * Empresas / Tenants - cada escritório de contabilidade
+ */
+export const empresas = mysqlTable("empresas", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Nome do escritório */
+  nome: varchar("nome", { length: 255 }).notNull(),
+  /** CNPJ do escritório */
+  cnpj: varchar("cnpj", { length: 30 }),
+  /** CRC do responsável */
+  crc: varchar("crc", { length: 50 }),
+  /** Nome do responsável */
+  responsavel: varchar("responsavel", { length: 255 }),
+  /** E-mail de contato */
+  email: varchar("email", { length: 320 }),
+  /** Telefone de contato */
+  telefone: varchar("telefone", { length: 30 }),
+  /** WhatsApp para propostas */
+  whatsapp: varchar("whatsapp", { length: 30 }),
+  /** Endereço do escritório */
+  endereco: text("endereco"),
+  /** Site do escritório */
+  site: varchar("site", { length: 500 }),
+  /** URL da logo no S3 */
+  logoUrl: text("logoUrl"),
+  logoKey: varchar("logoKey", { length: 512 }),
+  /** Cor primária (hex) */
+  corPrimaria: varchar("corPrimaria", { length: 10 }).default("#F97316").notNull(),
+  /** Cor secundária (hex) */
+  corSecundaria: varchar("corSecundaria", { length: 10 }).default("#FB923C").notNull(),
+  /** Cor de texto sobre a cor primária */
+  corTextoPrimaria: varchar("corTextoPrimaria", { length: 10 }).default("#FFFFFF").notNull(),
+  /** Configurações da proposta (JSON) */
+  configProposta: json("configProposta"),
+  /** Configurações de preços (JSON) */
+  configPrecos: json("configPrecos"),
+  /** Configurações de descontos (JSON) */
+  configDescontos: json("configDescontos"),
+  /** Ativo/inativo */
+  ativo: boolean("ativo").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Empresa = typeof empresas.$inferSelect;
+export type InsertEmpresa = typeof empresas.$inferInsert;
+
+/**
+ * Usuários internos - vinculados a uma empresa (tenant).
  */
 export const internalUsers = mysqlTable("internalUsers", {
   id: int("id").autoincrement().primaryKey(),
   nome: varchar("nome", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "superadmin"]).default("user").notNull(),
   ativo: boolean("ativo").default(true).notNull(),
+  /** Empresa à qual o usuário pertence */
+  empresaId: int("empresaId").references(() => empresas.id),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -50,7 +99,7 @@ export type Session = typeof sessions.$inferSelect;
 export type InsertSession = typeof sessions.$inferInsert;
 
 /**
- * Orçamentos de IRPF - armazena cada orçamento gerado
+ * Orçamentos de IRPF - vinculados a uma empresa (tenant)
  */
 export const orcamentos = mysqlTable("orcamentos", {
   id: int("id").autoincrement().primaryKey(),
@@ -76,6 +125,8 @@ export const orcamentos = mysqlTable("orcamentos", {
   observacoes: text("observacoes"),
   /** Quem criou o orçamento (usuário interno) */
   criadoPor: int("criadoPor").references(() => internalUsers.id),
+  /** Empresa à qual o orçamento pertence */
+  empresaId: int("empresaId").references(() => empresas.id),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

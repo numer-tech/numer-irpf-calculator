@@ -6,8 +6,9 @@ export type InternalUser = {
   id: number;
   nome: string;
   email: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "superadmin";
   ativo: boolean;
+  empresaId: number | null;
 };
 
 export type TrpcContext = {

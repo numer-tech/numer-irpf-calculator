@@ -1,8 +1,6 @@
 /*
  * Home - Calculadora de Orçamento IRPF 2026
- * Design: Corporate Dashboard Moderno
- * Layout: Duas colunas — formulário (esquerda) + resultado sticky (direita)
- * Identidade: Numer Contabilidade (laranja, branco, cinza)
+ * Design: Corporate Dashboard Moderno - White Label
  */
 
 import { useState } from "react";
@@ -20,7 +18,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import { useIRPFCalculator } from "@/hooks/useIRPFCalculator";
 
 export default function Home() {
-  const { user, logout } = useInternalAuth();
+  const { user, logout, empresa } = useInternalAuth();
   const [, navigate] = useLocation();
 
   const {
@@ -49,6 +47,11 @@ export default function Home() {
 
   const [showProposal, setShowProposal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  const corPrimaria = empresa?.corPrimaria || "#F97316";
+  const corSecundaria = empresa?.corSecundaria || "#FB923C";
+  const empresaNome = empresa?.nome || "Calculadora IRPF";
+  const responsavel = empresa?.responsavel || "";
 
   const createMutation = trpc.orcamento.create.useMutation({
     onSuccess: () => {
@@ -123,6 +126,7 @@ export default function Home() {
         resultado={resultado}
         valorFinal={valorFinal}
         propostaConfig={propostaConfig}
+        empresa={empresa}
         onBack={() => setShowProposal(false)}
       />
     );
@@ -137,6 +141,7 @@ export default function Home() {
         userName={user?.nome}
         userRole={user?.role}
         onLogout={handleLogout}
+        empresa={empresa}
       />
 
       {/* Settings Panel */}
@@ -155,8 +160,13 @@ export default function Home() {
         onUpdatePropostaConfig={updatePropostaConfig}
       />
 
-      {/* Hero banner sutil */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-400 to-amber-400">
+      {/* Hero banner com cores dinâmicas da empresa */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${corPrimaria}, ${corSecundaria})`,
+        }}
+      >
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/30" />
           <div className="absolute left-1/3 -bottom-10 w-60 h-60 rounded-full bg-white/20" />
@@ -250,15 +260,17 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer dinâmico */}
       <footer className="border-t border-gray-100 bg-white mt-8">
         <div className="container py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-xs text-gray-400">
-            Numer Contabilidade — Ferramenta de uso interno
+            {empresaNome} — Ferramenta de uso interno
           </p>
-          <p className="text-xs text-gray-400">
-            Higor Araujo, Contador
-          </p>
+          {responsavel && (
+            <p className="text-xs text-gray-400">
+              {responsavel}
+            </p>
+          )}
         </div>
       </footer>
     </div>

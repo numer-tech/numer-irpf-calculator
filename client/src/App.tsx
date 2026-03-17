@@ -8,11 +8,35 @@ import Home from "./pages/Home";
 import Historico from "./pages/Historico";
 import Login from "./pages/Login";
 import Usuarios from "./pages/Usuarios";
+import Empresas from "./pages/Empresas";
+import MinhaEmpresa from "./pages/MinhaEmpresa";
 import { useInternalAuth } from "./hooks/useInternalAuth";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
+
+/** Aplica as CSS variables da empresa dinamicamente */
+function EmpresaThemeInjector() {
+  const { empresa } = useInternalAuth();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (empresa) {
+      root.style.setProperty("--empresa-primary", empresa.corPrimaria);
+      root.style.setProperty("--empresa-secondary", empresa.corSecundaria);
+      root.style.setProperty("--empresa-text-primary", empresa.corTextoPrimaria);
+    } else {
+      // Defaults (Numer)
+      root.style.setProperty("--empresa-primary", "#F97316");
+      root.style.setProperty("--empresa-secondary", "#FB923C");
+      root.style.setProperty("--empresa-text-primary", "#FFFFFF");
+    }
+  }, [empresa]);
+
+  return null;
+}
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isAuthenticated, refetch } = useInternalAuth();
+  const { isLoading, isAuthenticated, refetch } = useInternalAuth();
 
   if (isLoading) {
     return (
@@ -35,10 +59,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <AuthGuard>
+      <EmpresaThemeInjector />
       <Switch>
         <Route path={"/"} component={Home} />
         <Route path={"/historico"} component={Historico} />
         <Route path={"/usuarios"} component={Usuarios} />
+        <Route path={"/empresas"} component={Empresas} />
+        <Route path={"/minha-empresa"} component={MinhaEmpresa} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>

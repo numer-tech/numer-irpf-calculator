@@ -9,8 +9,7 @@ import { useState, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
+import { useInternalAuth } from "@/hooks/useInternalAuth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,7 +146,7 @@ function buildProposalData(orc: any): {
 }
 
 export default function Historico() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAdmin: isAdminRole, empresa } = useInternalAuth();
   const [, navigate] = useLocation();
   const [filter, setFilter] = useState<StatusFilter>("todos");
   const [searchTerm, setSearchTerm] = useState("");
@@ -157,7 +156,7 @@ export default function Historico() {
   const [proposalOrc, setProposalOrc] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = isAdminRole;
   const utils = trpc.useUtils();
 
   // Admin usa listAll, usuário comum usa list
@@ -303,7 +302,7 @@ export default function Historico() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="text-gray-500 mb-4">Faça login para acessar o histórico.</p>
-          <Button onClick={() => (window.location.href = getLoginUrl())}>
+          <Button onClick={() => navigate("/login")}>
             Fazer Login
           </Button>
         </div>
@@ -319,6 +318,7 @@ export default function Historico() {
         clientData={clientData}
         resultado={resultado}
         valorFinal={valorFinal}
+        empresa={empresa}
         onBack={() => setProposalOrc(null)}
       />
     );

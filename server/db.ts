@@ -1,6 +1,6 @@
-import { eq, desc, and, gt } from "drizzle-orm";
+import { eq, desc, and, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, orcamentos, InsertOrcamento, Orcamento, internalUsers, sessions, InternalUser } from "../drizzle/schema";
+import { InsertUser, users, orcamentos, InsertOrcamento, Orcamento, internalUsers, sessions, InternalUser, empresas, InsertEmpresa, Empresa } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { nanoid } from "nanoid";
 
@@ -70,6 +70,88 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+// ─── Empresas / Tenants ───────────────────────────────────────────────────
+
+export async function createEmpresa(data: {
+  nome: string;
+  cnpj?: string;
+  crc?: string;
+  responsavel?: string;
+  email?: string;
+  telefone?: string;
+  whatsapp?: string;
+  endereco?: string;
+  site?: string;
+  corPrimaria?: string;
+  corSecundaria?: string;
+  corTextoPrimaria?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(empresas).values({
+    nome: data.nome,
+    cnpj: data.cnpj ?? null,
+    crc: data.crc ?? null,
+    responsavel: data.responsavel ?? null,
+    email: data.email ?? null,
+    telefone: data.telefone ?? null,
+    whatsapp: data.whatsapp ?? null,
+    endereco: data.endereco ?? null,
+    site: data.site ?? null,
+    corPrimaria: data.corPrimaria ?? "#F97316",
+    corSecundaria: data.corSecundaria ?? "#FB923C",
+    corTextoPrimaria: data.corTextoPrimaria ?? "#FFFFFF",
+    ativo: true,
+  });
+  return getEmpresaById(result[0].insertId);
+}
+
+export async function getEmpresaById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.select().from(empresas).where(eq(empresas.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function listEmpresas() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(empresas).orderBy(desc(empresas.createdAt));
+}
+
+export async function updateEmpresa(id: number, data: Partial<{
+  nome: string;
+  cnpj: string | null;
+  crc: string | null;
+  responsavel: string | null;
+  email: string | null;
+  telefone: string | null;
+  whatsapp: string | null;
+  endereco: string | null;
+  site: string | null;
+  logoUrl: string | null;
+  logoKey: string | null;
+  corPrimaria: string;
+  corSecundaria: string;
+  corTextoPrimaria: string;
+  configProposta: any;
+  configPrecos: any;
+  configDescontos: any;
+  ativo: boolean;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(empresas).set(data).where(eq(empresas.id, id));
+  return getEmpresaById(id);
+}
+
+export async function deleteEmpresa(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(empresas).set({ ativo: false }).where(eq(empresas.id, id));
+  return { success: true };
+}
+
 // ─── Internal Users (autenticação própria) ─────────────────────────────────
 
 export async function getInternalUserByEmail(email: string) {
@@ -90,7 +172,8 @@ export async function createInternalUser(data: {
   nome: string;
   email: string;
   passwordHash: string;
-  role?: "user" | "admin";
+  role?: "user" | "admin" | "superadmin";
+  empresaId?: number | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -100,10 +183,29 @@ export async function createInternalUser(data: {
     passwordHash: data.passwordHash,
     role: data.role ?? "user",
     ativo: true,
+    empresaId: data.empresaId ?? null,
   });
   return getInternalUserById(result[0].insertId);
 }
 
+/** Lista usuários internos de uma empresa específica */
+export async function listInternalUsersByEmpresa(empresaId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select({
+    id: internalUsers.id,
+    nome: internalUsers.nome,
+    email: internalUsers.email,
+    role: internalUsers.role,
+    ativo: internalUsers.ativo,
+    empresaId: internalUsers.empresaId,
+    createdAt: internalUsers.createdAt,
+  }).from(internalUsers)
+    .where(eq(internalUsers.empresaId, empresaId))
+    .orderBy(desc(internalUsers.createdAt));
+}
+
+/** Lista TODOS os usuários internos (superadmin) */
 export async function listInternalUsers() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -113,6 +215,7 @@ export async function listInternalUsers() {
     email: internalUsers.email,
     role: internalUsers.role,
     ativo: internalUsers.ativo,
+    empresaId: internalUsers.empresaId,
     createdAt: internalUsers.createdAt,
   }).from(internalUsers).orderBy(desc(internalUsers.createdAt));
 }
@@ -121,8 +224,9 @@ export async function updateInternalUser(id: number, data: Partial<{
   nome: string;
   email: string;
   passwordHash: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "superadmin";
   ativo: boolean;
+  empresaId: number | null;
 }>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -217,7 +321,26 @@ export async function listOrcamentosByUser(userId: number) {
   return rows.map((r) => ({ ...r.orcamento, criadorNome: r.criadorNome ?? "Desconhecido" }));
 }
 
-/** Lista TODOS os orçamentos (admin) com nome do criador */
+/** Lista orçamentos de uma empresa específica (admin da empresa) */
+export async function listOrcamentosByEmpresa(empresaId: number, filterUserId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const conditions = filterUserId
+    ? and(eq(orcamentos.empresaId, empresaId), eq(orcamentos.criadoPor, filterUserId))
+    : eq(orcamentos.empresaId, empresaId);
+
+  const rows = await db
+    .select({ orcamento: orcamentos, criadorNome: internalUsers.nome })
+    .from(orcamentos)
+    .leftJoin(internalUsers, eq(orcamentos.criadoPor, internalUsers.id))
+    .where(conditions)
+    .orderBy(desc(orcamentos.createdAt));
+
+  return rows.map((r) => ({ ...r.orcamento, criadorNome: r.criadorNome ?? "Desconhecido" }));
+}
+
+/** Lista TODOS os orçamentos (superadmin) com nome do criador */
 export async function listAllOrcamentos(filterUserId?: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

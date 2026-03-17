@@ -1,6 +1,6 @@
 /*
  * ProposalView - Visualização e geração da proposta de orçamento
- * Design: Layout de documento profissional com identidade Numer
+ * Design: Layout de documento profissional com identidade white-label
  * Lógica: detalhamento de itens com preço unitário x quantidade + descontos + config editável
  */
 
@@ -18,13 +18,15 @@ import {
   Phone,
   Package,
   Tag,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import type { ClientData, CalculationResult, PropostaConfig } from "@/hooks/useIRPFCalculator";
+import type { EmpresaData } from "@/hooks/useInternalAuth";
 
-const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
+const DEFAULT_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 const PROPOSAL_HEADER_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/proposal-header-54h6qUingoWxgiHNzuFjAU.webp";
 
 export interface ProposalViewProps {
@@ -32,6 +34,7 @@ export interface ProposalViewProps {
   resultado: CalculationResult;
   valorFinal: number;
   propostaConfig?: PropostaConfig;
+  empresa?: EmpresaData | null;
   onBack: () => void;
 }
 
@@ -63,11 +66,15 @@ function generateProposalText(
   clientData: ClientData,
   resultado: CalculationResult,
   valorFinal: number,
-  propConfig: PropostaConfig
+  propConfig: PropostaConfig,
+  empresa?: EmpresaData | null
 ): string {
+  const empresaNome = empresa?.nome || "Calculadora IRPF";
+  const responsavel = empresa?.responsavel || "";
+
   const lines = [
     `═══════════════════════════════`,
-    `   NUMER CONTABILIDADE`,
+    `   ${empresaNome.toUpperCase()}`,
     `   Proposta de Serviço - IRPF 2026`,
     `═══════════════════════════════`,
     ``,
@@ -88,7 +95,6 @@ function generateProposalText(
     ``,
   ];
 
-  // Descontos
   const descontosAtivos = resultado.descontosAplicados?.filter((d) => d.ativo) ?? [];
   if (descontosAtivos.length > 0) {
     lines.push(`━━━ DESCONTOS ━━━`);
@@ -124,8 +130,8 @@ function generateProposalText(
     propConfig.observacoes ? `\nObservações: ${propConfig.observacoes}` : "",
     ``,
     `═══════════════════════════════`,
-    `   Higor Araujo - Contador`,
-    `   Numer Contabilidade`,
+    responsavel ? `   ${responsavel}` : "",
+    `   ${empresaNome}`,
     `═══════════════════════════════`,
   );
 
@@ -136,10 +142,14 @@ function generateWhatsAppText(
   clientData: ClientData,
   resultado: CalculationResult,
   valorFinal: number,
-  propConfig: PropostaConfig
+  propConfig: PropostaConfig,
+  empresa?: EmpresaData | null
 ): string {
+  const empresaNome = empresa?.nome || "Calculadora IRPF";
+  const responsavel = empresa?.responsavel || "";
+
   const lines = [
-    `*NUMER CONTABILIDADE*`,
+    `*${empresaNome.toUpperCase()}*`,
     `_Proposta de Serviço - IRPF 2026_`,
     ``,
     `📅 ${formatDate()}`,
@@ -157,7 +167,6 @@ function generateWhatsAppText(
     ``,
   ];
 
-  // Descontos
   const descontosAtivos = resultado.descontosAplicados?.filter((d) => d.ativo) ?? [];
   if (descontosAtivos.length > 0) {
     lines.push(`🏷️ *Descontos:*`);
@@ -188,8 +197,8 @@ function generateWhatsAppText(
     propConfig.condicoesGerais ? `📌 ${propConfig.condicoesGerais}` : "",
     propConfig.observacoes ? `\n📝 _${propConfig.observacoes}_` : "",
     ``,
-    `_Higor Araujo - Contador_`,
-    `_Numer Contabilidade_`,
+    responsavel ? `_${responsavel}_` : "",
+    `_${empresaNome}_`,
   );
 
   return lines.filter((l) => l !== undefined && l !== "").join("\n");
@@ -200,20 +209,28 @@ export default function ProposalView({
   resultado,
   valorFinal,
   propostaConfig,
+  empresa,
   onBack,
 }: ProposalViewProps) {
   const proposalRef = useRef<HTMLDivElement>(null);
   const propConfig = propostaConfig ?? defaultPropostaForView;
 
+  const logoUrl = empresa?.logoUrl || DEFAULT_LOGO;
+  const empresaNome = empresa?.nome || "Calculadora IRPF";
+  const responsavel = empresa?.responsavel || "";
+  const corPrimaria = empresa?.corPrimaria || "#F97316";
+  const corSecundaria = empresa?.corSecundaria || "#FB923C";
+  const corTextoPrimaria = empresa?.corTextoPrimaria || "#FFFFFF";
+
   const handleCopy = () => {
-    const text = generateProposalText(clientData, resultado, valorFinal, propConfig);
+    const text = generateProposalText(clientData, resultado, valorFinal, propConfig, empresa);
     navigator.clipboard.writeText(text).then(() => {
       toast.success("Proposta copiada para a área de transferência!");
     });
   };
 
   const handleWhatsApp = () => {
-    const text = generateWhatsAppText(clientData, resultado, valorFinal, propConfig);
+    const text = generateWhatsAppText(clientData, resultado, valorFinal, propConfig, empresa);
     const phone = clientData.telefone.replace(/\D/g, "");
     const url = phone
       ? `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`
@@ -241,7 +258,7 @@ export default function ProposalView({
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="text-gray-600 hover:text-orange-600 gap-1.5"
+            className="text-gray-600 gap-1.5"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar
@@ -252,7 +269,7 @@ export default function ProposalView({
               variant="outline"
               size="sm"
               onClick={handleCopy}
-              className="gap-1.5 text-gray-600 hover:text-orange-600 hover:border-orange-200"
+              className="gap-1.5 text-gray-600"
             >
               <Copy className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Copiar</span>
@@ -261,7 +278,7 @@ export default function ProposalView({
               variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="gap-1.5 text-gray-600 hover:text-orange-600 hover:border-orange-200"
+              className="gap-1.5 text-gray-600"
             >
               <Printer className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Imprimir</span>
@@ -281,26 +298,40 @@ export default function ProposalView({
       {/* Proposal document */}
       <div className="container py-8 max-w-3xl" ref={proposalRef}>
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          {/* Header com imagem */}
+          {/* Header com cores da empresa */}
           <div className="relative h-28 sm:h-36 overflow-hidden">
             <img
               src={PROPOSAL_HEADER_URL}
               alt=""
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-600/90 to-amber-500/80" />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(135deg, ${corPrimaria}E6, ${corSecundaria}CC)`,
+              }}
+            />
             <div className="absolute inset-0 flex items-center px-8">
               <div className="flex items-center gap-4">
-                <img
-                  src={LOGO_URL}
-                  alt="Numer"
-                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl shadow-lg"
-                />
-                <div className="text-white">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={empresaNome}
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl shadow-lg object-contain bg-white/10 p-0.5"
+                  />
+                ) : (
+                  <div
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl shadow-lg flex items-center justify-center"
+                    style={{ backgroundColor: `${corPrimaria}40`, color: corTextoPrimaria }}
+                  >
+                    <Building2 className="w-8 h-8" />
+                  </div>
+                )}
+                <div style={{ color: corTextoPrimaria }}>
                   <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Sora', sans-serif" }}>
-                    Numer Contabilidade
+                    {empresaNome}
                   </h1>
-                  <p className="text-sm text-white/80">Proposta de Serviço — IRPF 2026</p>
+                  <p className="text-sm" style={{ opacity: 0.8 }}>Proposta de Serviço — IRPF 2026</p>
                 </div>
               </div>
             </div>
@@ -318,7 +349,7 @@ export default function ProposalView({
             {(clientData.nome || clientData.cpf) && (
               <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2" style={{ fontFamily: "'Sora', sans-serif" }}>
-                  <User className="w-4 h-4 text-orange-500" />
+                  <User className="w-4 h-4" style={{ color: corPrimaria }} />
                   Dados do Cliente
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -347,7 +378,7 @@ export default function ProposalView({
             {/* Detalhamento do orçamento */}
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2" style={{ fontFamily: "'Sora', sans-serif" }}>
-                <FileText className="w-4 h-4 text-orange-500" />
+                <FileText className="w-4 h-4" style={{ color: corPrimaria }} />
                 Detalhamento do Orçamento
               </h3>
 
@@ -388,7 +419,7 @@ export default function ProposalView({
                     <div className="col-span-2 text-center text-sm text-gray-500">
                       {formatCurrency(item.precoUnitario)}
                     </div>
-                    <div className="col-span-3 text-right text-sm font-medium text-orange-700">
+                    <div className="col-span-3 text-right text-sm font-medium" style={{ color: corPrimaria }}>
                       {formatCurrency(item.subtotal)}
                     </div>
                   </div>
@@ -428,11 +459,14 @@ export default function ProposalView({
                 ))}
 
                 {/* Total */}
-                <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center bg-orange-50 border-t border-orange-200">
+                <div
+                  className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-t"
+                  style={{ backgroundColor: `${corPrimaria}10`, borderColor: `${corPrimaria}30` }}
+                >
                   <div className="col-span-9">
                     <span className="text-sm font-bold text-gray-800">Total</span>
                   </div>
-                  <div className="col-span-3 text-right text-sm font-bold text-orange-700">
+                  <div className="col-span-3 text-right text-sm font-bold" style={{ color: corPrimaria }}>
                     {formatCurrency(resultado.valorTotal)}
                   </div>
                 </div>
@@ -443,7 +477,10 @@ export default function ProposalView({
                 <span className="text-xs text-gray-500">
                   {resultado.totalItens} itens · {resultado.totalFichas} fichas
                 </span>
-                <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2.5 py-1 rounded-full">
+                <span
+                  className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                  style={{ color: corPrimaria, backgroundColor: `${corPrimaria}15` }}
+                >
                   Complexidade: {resultado.nivelLabel}
                 </span>
               </div>
@@ -460,7 +497,7 @@ export default function ProposalView({
                     key={ficha}
                     className="flex items-center gap-2 text-sm text-gray-600 py-2 px-3 bg-gray-50 rounded-lg"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-orange-500 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: corPrimaria }} />
                     {ficha}
                   </div>
                 ))}
@@ -470,18 +507,24 @@ export default function ProposalView({
             <Separator />
 
             {/* Valor final destacado */}
-            <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl p-6 text-white text-center">
-              <p className="text-sm text-white/80 mb-1">Valor do Serviço</p>
+            <div
+              className="rounded-xl p-6 text-center"
+              style={{
+                background: `linear-gradient(135deg, ${corPrimaria}, ${corSecundaria})`,
+                color: corTextoPrimaria,
+              }}
+            >
+              <p className="text-sm mb-1" style={{ opacity: 0.8 }}>Valor do Serviço</p>
               <p className="text-3xl font-bold" style={{ fontFamily: "'Sora', sans-serif" }}>
                 {formatCurrency(valorFinal)}
               </p>
               {valorFinal !== resultado.valorTotal && (
-                <p className="text-xs text-white/60 mt-1">
+                <p className="text-xs mt-1" style={{ opacity: 0.6 }}>
                   (valor ajustado — calculado: {formatCurrency(resultado.valorTotal)})
                 </p>
               )}
               {descontosAtivos.length > 0 && (
-                <p className="text-xs text-white/70 mt-1">
+                <p className="text-xs mt-1" style={{ opacity: 0.7 }}>
                   Inclui {descontosAtivos.length} desconto{descontosAtivos.length > 1 ? "s" : ""} aplicado{descontosAtivos.length > 1 ? "s" : ""}
                 </p>
               )}
@@ -502,7 +545,7 @@ export default function ProposalView({
                   "Suporte em caso de malha fina",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-2.5 text-sm text-gray-600">
-                    <CheckCircle2 className="w-4 h-4 text-orange-500 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: corPrimaria }} />
                     {item}
                   </div>
                 ))}
@@ -533,15 +576,26 @@ export default function ProposalView({
 
             {/* Assinatura */}
             <div className="text-center pt-2">
-              <img
-                src={LOGO_URL}
-                alt="Numer"
-                className="w-10 h-10 rounded-lg mx-auto mb-2"
-              />
-              <p className="text-sm font-semibold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
-                Higor Araujo
-              </p>
-              <p className="text-xs text-gray-500">Contador — Numer Contabilidade</p>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={empresaNome}
+                  className="w-10 h-10 rounded-lg mx-auto mb-2 object-contain"
+                />
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center"
+                  style={{ backgroundColor: `${corPrimaria}15`, color: corPrimaria }}
+                >
+                  <Building2 className="w-5 h-5" />
+                </div>
+              )}
+              {responsavel && (
+                <p className="text-sm font-semibold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
+                  {responsavel}
+                </p>
+              )}
+              <p className="text-xs text-gray-500">{empresaNome}</p>
             </div>
           </div>
         </div>

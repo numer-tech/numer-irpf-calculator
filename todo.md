@@ -81,3 +81,18 @@
 - [x] Atualizar ProposalView para usar as configurações de proposta e descontos
 - [x] Atualizar schema/rotas do banco para salvar descontos junto ao orçamento
 - [x] Testar e salvar checkpoint
+
+# TODO - White Label (Multi-Tenant)
+
+- [x] Criar tabela 'empresas' (tenant) no schema: id, nome, logo, corPrimaria, corSecundaria, telefone, whatsapp, endereco, cnpj, crc, responsavel, email, site, configProposta
+- [x] Vincular tabela internalUsers a uma empresa (tenantId)
+- [x] Vincular tabela orcamentos a uma empresa (tenantId)
+- [x] Criar rotas tRPC para CRUD de empresa e upload de logo
+- [x] Implementar middleware multi-tenant (filtrar dados por empresa do usuário logado)
+- [x] Criar painel de personalização no frontend: logo, cores, nome, dados de contato
+- [x] Aplicar tema dinâmico (cores CSS variáveis) baseado na empresa do usuário logado
+- [x] Atualizar tela de Login para usar logo e cores da empresa
+- [x] Atualizar Header para usar logo e nome da empresa
+- [x] Atualizar ProposalView para usar dados da empresa na proposta
+- [x] Painel super-admin (Higor) para gerenciar todas as empresas
+- [x] Testar e salvar checkpoint

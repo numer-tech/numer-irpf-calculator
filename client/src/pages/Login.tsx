@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, Mail, Eye, EyeOff, Calculator, Shield } from "lucide-react";
+import { Loader2, Lock, Mail, Eye, EyeOff, Calculator, Shield, Building2 } from "lucide-react";
 
-const LOGO_URL =
+const DEFAULT_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 
 interface LoginProps {
@@ -19,6 +19,28 @@ export default function Login({ onSuccess }: LoginProps) {
   const [senha, setSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
   const utils = trpc.useUtils();
+
+  // Buscar branding da empresa pelo domínio (público, sem autenticação)
+  const brandingQuery = trpc.empresa.branding.useQuery(undefined, {
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const branding = brandingQuery.data;
+  const logoUrl = branding?.logoUrl || DEFAULT_LOGO;
+  const empresaNome = branding?.nome || "Calculadora IRPF";
+  const responsavel = branding?.responsavel || "";
+  const corPrimaria = branding?.corPrimaria || "#F97316";
+  const corSecundaria = branding?.corSecundaria || "#FB923C";
+  const corTextoPrimaria = branding?.corTextoPrimaria || "#FFFFFF";
+
+  // Aplicar cores da empresa no fundo da página de login
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--empresa-primary", corPrimaria);
+    root.style.setProperty("--empresa-secondary", corSecundaria);
+    root.style.setProperty("--empresa-text-primary", corTextoPrimaria);
+  }, [corPrimaria, corSecundaria, corTextoPrimaria]);
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
@@ -41,7 +63,12 @@ export default function Login({ onSuccess }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-gray-50 p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: `linear-gradient(135deg, ${corPrimaria}08 0%, white 50%, #f9fafb 100%)`,
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -50,25 +77,38 @@ export default function Login({ onSuccess }: LoginProps) {
       >
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          {/* Header laranja */}
-          <div className="bg-gradient-to-br from-orange-500 to-orange-400 px-8 py-8 text-center relative overflow-hidden">
+          {/* Header com cores da empresa */}
+          <div
+            className="px-8 py-8 text-center relative overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${corPrimaria}, ${corSecundaria})`,
+            }}
+          >
             <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
             <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-white/10" />
             <div className="relative">
               <div className="flex justify-center mb-4">
-                <img
-                  src={LOGO_URL}
-                  alt="Numer Contabilidade"
-                  className="h-16 w-16 rounded-xl shadow-lg"
-                />
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={empresaNome}
+                    className="h-16 w-16 rounded-xl shadow-lg object-contain bg-white/10 p-0.5"
+                  />
+                ) : (
+                  <div
+                    className="h-16 w-16 rounded-xl shadow-lg flex items-center justify-center bg-white/20"
+                  >
+                    <Building2 className="w-8 h-8" style={{ color: corTextoPrimaria }} />
+                  </div>
+                )}
               </div>
               <h1
-                className="text-2xl font-bold text-white"
-                style={{ fontFamily: "'Sora', sans-serif" }}
+                className="text-2xl font-bold"
+                style={{ fontFamily: "'Sora', sans-serif", color: corTextoPrimaria }}
               >
-                Numer Contabilidade
+                {empresaNome}
               </h1>
-              <p className="text-orange-100 text-sm mt-1">
+              <p className="text-sm mt-1" style={{ color: corTextoPrimaria, opacity: 0.8 }}>
                 Calculadora de Orçamento IRPF 2026
               </p>
             </div>
@@ -83,7 +123,7 @@ export default function Login({ onSuccess }: LoginProps) {
               Entrar na sua conta
             </h2>
             <p className="text-sm text-gray-500 mb-6">
-              Acesso restrito à equipe da Numer Contabilidade
+              Acesso restrito à equipe da {empresaNome}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -99,7 +139,8 @@ export default function Login({ onSuccess }: LoginProps) {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 border-gray-200 focus:border-orange-400"
+                    className="pl-10 border-gray-200"
+                    style={{ ["--tw-ring-color" as string]: `${corPrimaria}40` }}
                     autoComplete="email"
                     disabled={loginMutation.isPending}
                   />
@@ -118,7 +159,8 @@ export default function Login({ onSuccess }: LoginProps) {
                     placeholder="••••••••"
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
-                    className="pl-10 pr-10 border-gray-200 focus:border-orange-400"
+                    className="pl-10 pr-10 border-gray-200"
+                    style={{ ["--tw-ring-color" as string]: `${corPrimaria}40` }}
                     autoComplete="current-password"
                     disabled={loginMutation.isPending}
                   />
@@ -135,7 +177,10 @@ export default function Login({ onSuccess }: LoginProps) {
               <Button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold h-11 mt-2 rounded-xl"
+                className="w-full text-white font-semibold h-11 mt-2 rounded-xl"
+                style={{
+                  backgroundColor: corPrimaria,
+                }}
               >
                 {loginMutation.isPending ? (
                   <>
@@ -150,8 +195,14 @@ export default function Login({ onSuccess }: LoginProps) {
 
             {/* Info cards */}
             <div className="mt-6 space-y-2">
-              <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-xl">
-                <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 flex-shrink-0">
+              <div
+                className="flex items-center gap-3 p-3 rounded-xl"
+                style={{ backgroundColor: `${corPrimaria}08` }}
+              >
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${corPrimaria}15`, color: corPrimaria }}
+                >
                   <Calculator className="w-3.5 h-3.5" />
                 </div>
                 <p className="text-xs text-gray-600">Orçamentos automáticos com base nas fichas do IRPF</p>
@@ -168,7 +219,8 @@ export default function Login({ onSuccess }: LoginProps) {
           {/* Footer */}
           <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-400">
-              Ferramenta de uso interno — Higor Araujo, Contador
+              {responsavel ? `${responsavel} — ` : ""}
+              {empresaNome}
             </p>
           </div>
         </div>
