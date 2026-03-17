@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 
+// ─── Tipos de dados do cliente ───
 export interface ClientData {
   nome: string;
   cpf: string;
@@ -7,79 +8,29 @@ export interface ClientData {
   email: string;
 }
 
+// ─── Estado do checklist: quantidade de itens por ficha ───
 export interface ChecklistState {
   // Rendimentos
-  fontesRendimento: "1" | "2-3" | "4+";
-  rendimentosIsentos: boolean;
-  rendimentosTributacaoExclusiva: boolean;
-  rendimentosRRA: boolean;
-
-  // Bens e Patrimônio
-  imoveis: "0" | "1-2" | "3+";
-  veiculos: "0" | "1-2" | "3+";
-  contasBancarias: "1-2" | "3-5" | "6+";
-  criptoativos: boolean;
-
-  // Investimentos e Operações Especiais
-  rendaVariavel: boolean;
-  dayTrade: boolean;
-  ganhoCapital: boolean;
-  rendimentosExterior: boolean;
-
-  // Deduções e Dependentes
-  dependentes: "0" | "1-2" | "3+";
-  despesasMedicas: boolean;
-  despesasEducacao: boolean;
-  pensaoAlimenticia: boolean;
-  doacoesIncentivadas: boolean;
-
-  // Situações Especiais
-  atividadeRural: boolean;
-  espolio: boolean;
-  dividasOnus: boolean;
-  alugueisRecebidos: boolean;
-}
-
-export type ComplexityLevel = "simples" | "medio" | "complexo" | "muito_complexo";
-
-export interface CalculationResult {
-  pontos: number;
-  nivel: ComplexityLevel;
-  nivelLabel: string;
-  valorMinimo: number;
-  valorMaximo: number;
-  valorSugerido: number;
-  fichasIdentificadas: string[];
-}
-
-// --- Configuração de Pontuação ---
-export interface PontosConfig {
-  // Rendimentos
-  fontesRendimento_1: number;
-  fontesRendimento_2_3: number;
-  fontesRendimento_4: number;
+  fontesRendimentoTributavel: number;
   rendimentosIsentos: number;
   rendimentosTributacaoExclusiva: number;
   rendimentosRRA: number;
 
   // Bens e Patrimônio
-  imoveis_1_2: number;
-  imoveis_3: number;
-  veiculos_1_2: number;
-  veiculos_3: number;
-  contasBancarias_3_5: number;
-  contasBancarias_6: number;
+  imoveis: number;
+  veiculos: number;
+  contasBancarias: number;
+  aplicacoesFinanceiras: number;
   criptoativos: number;
 
-  // Investimentos
-  rendaVariavel: number;
-  dayTrade: number;
+  // Investimentos e Operações Especiais
+  operacoesRendaVariavel: number;
+  operacoesDayTrade: number;
   ganhoCapital: number;
   rendimentosExterior: number;
 
-  // Deduções
-  dependentes_1_2: number;
-  dependentes_3: number;
+  // Deduções e Dependentes
+  dependentes: number;
   despesasMedicas: number;
   despesasEducacao: number;
   pensaoAlimenticia: number;
@@ -92,71 +43,101 @@ export interface PontosConfig {
   alugueisRecebidos: number;
 }
 
-export interface FaixaPreco {
+// ─── Configuração de preço unitário por item ───
+export interface ItemPrecoConfig {
+  key: keyof ChecklistState;
   label: string;
-  pontosMax: number;
-  valorMinimo: number;
-  valorMaximo: number;
-  valorSugerido: number;
+  section: string;
+  precoUnitario: number;
+  descricaoUnidade: string; // ex: "por fonte", "por imóvel"
 }
 
 export interface PricingConfig {
-  pontos: PontosConfig;
-  faixas: FaixaPreco[];
+  valorBase: number; // valor mínimo base da declaração
+  itensPreco: ItemPrecoConfig[];
 }
 
-export const defaultPontosConfig: PontosConfig = {
-  fontesRendimento_1: 2,
-  fontesRendimento_2_3: 5,
-  fontesRendimento_4: 12,
-  rendimentosIsentos: 3,
-  rendimentosTributacaoExclusiva: 4,
-  rendimentosRRA: 8,
-  imoveis_1_2: 5,
-  imoveis_3: 12,
-  veiculos_1_2: 3,
-  veiculos_3: 7,
-  contasBancarias_3_5: 5,
-  contasBancarias_6: 10,
-  criptoativos: 15,
-  rendaVariavel: 15,
-  dayTrade: 20,
-  ganhoCapital: 12,
-  rendimentosExterior: 18,
-  dependentes_1_2: 4,
-  dependentes_3: 8,
-  despesasMedicas: 4,
-  despesasEducacao: 3,
-  pensaoAlimenticia: 5,
-  doacoesIncentivadas: 3,
-  atividadeRural: 15,
-  espolio: 20,
-  dividasOnus: 4,
-  alugueisRecebidos: 8,
-};
+export type ComplexityLevel = "simples" | "medio" | "complexo" | "muito_complexo";
 
-export const defaultFaixas: FaixaPreco[] = [
-  { label: "Simples", pontosMax: 15, valorMinimo: 150, valorMaximo: 250, valorSugerido: 200 },
-  { label: "Médio", pontosMax: 35, valorMinimo: 250, valorMaximo: 450, valorSugerido: 350 },
-  { label: "Complexo", pontosMax: 60, valorMinimo: 450, valorMaximo: 750, valorSugerido: 600 },
-  { label: "Muito Complexo", pontosMax: 90, valorMinimo: 750, valorMaximo: 1200, valorSugerido: 950 },
-  { label: "Excepcional", pontosMax: 999, valorMinimo: 1200, valorMaximo: 2000, valorSugerido: 1500 },
+export interface LineItem {
+  label: string;
+  quantidade: number;
+  precoUnitario: number;
+  subtotal: number;
+  descricaoUnidade: string;
+}
+
+export interface CalculationResult {
+  nivel: ComplexityLevel;
+  nivelLabel: string;
+  valorBase: number;
+  valorItens: number;
+  valorTotal: number;
+  totalItens: number;
+  totalFichas: number;
+  lineItems: LineItem[];
+  fichasIdentificadas: string[];
+}
+
+// ─── Configuração padrão de preços unitários ───
+export const defaultItensPreco: ItemPrecoConfig[] = [
+  // Rendimentos
+  { key: "fontesRendimentoTributavel", label: "Fontes de rendimento tributável", section: "Rendimentos", precoUnitario: 15, descricaoUnidade: "por fonte" },
+  { key: "rendimentosIsentos", label: "Rendimentos isentos / não tributáveis", section: "Rendimentos", precoUnitario: 10, descricaoUnidade: "por informe" },
+  { key: "rendimentosTributacaoExclusiva", label: "Tributação exclusiva (13º, PLR, aplicações)", section: "Rendimentos", precoUnitario: 10, descricaoUnidade: "por informe" },
+  { key: "rendimentosRRA", label: "Rendimentos recebidos acumuladamente (RRA)", section: "Rendimentos", precoUnitario: 25, descricaoUnidade: "por processo" },
+
+  // Bens e Patrimônio
+  { key: "imoveis", label: "Imóveis", section: "Bens e Patrimônio", precoUnitario: 20, descricaoUnidade: "por imóvel" },
+  { key: "veiculos", label: "Veículos", section: "Bens e Patrimônio", precoUnitario: 15, descricaoUnidade: "por veículo" },
+  { key: "contasBancarias", label: "Contas bancárias", section: "Bens e Patrimônio", precoUnitario: 8, descricaoUnidade: "por conta" },
+  { key: "aplicacoesFinanceiras", label: "Aplicações financeiras", section: "Bens e Patrimônio", precoUnitario: 10, descricaoUnidade: "por aplicação" },
+  { key: "criptoativos", label: "Criptoativos", section: "Bens e Patrimônio", precoUnitario: 30, descricaoUnidade: "por ativo" },
+
+  // Investimentos e Operações Especiais
+  { key: "operacoesRendaVariavel", label: "Operações em renda variável (ações, FIIs)", section: "Investimentos e Operações Especiais", precoUnitario: 25, descricaoUnidade: "por mês operado" },
+  { key: "operacoesDayTrade", label: "Operações day trade", section: "Investimentos e Operações Especiais", precoUnitario: 35, descricaoUnidade: "por mês operado" },
+  { key: "ganhoCapital", label: "Ganho de capital (venda de bens)", section: "Investimentos e Operações Especiais", precoUnitario: 40, descricaoUnidade: "por operação" },
+  { key: "rendimentosExterior", label: "Rendimentos do exterior", section: "Investimentos e Operações Especiais", precoUnitario: 50, descricaoUnidade: "por fonte" },
+
+  // Deduções e Dependentes
+  { key: "dependentes", label: "Dependentes", section: "Deduções e Dependentes", precoUnitario: 10, descricaoUnidade: "por dependente" },
+  { key: "despesasMedicas", label: "Despesas médicas", section: "Deduções e Dependentes", precoUnitario: 5, descricaoUnidade: "por despesa" },
+  { key: "despesasEducacao", label: "Despesas com educação", section: "Deduções e Dependentes", precoUnitario: 5, descricaoUnidade: "por despesa" },
+  { key: "pensaoAlimenticia", label: "Pensão alimentícia", section: "Deduções e Dependentes", precoUnitario: 15, descricaoUnidade: "por beneficiário" },
+  { key: "doacoesIncentivadas", label: "Doações incentivadas (ECA, idoso, cultura)", section: "Deduções e Dependentes", precoUnitario: 10, descricaoUnidade: "por doação" },
+
+  // Situações Especiais
+  { key: "atividadeRural", label: "Atividade rural", section: "Situações Especiais", precoUnitario: 80, descricaoUnidade: "por atividade" },
+  { key: "espolio", label: "Espólio / herança", section: "Situações Especiais", precoUnitario: 100, descricaoUnidade: "por espólio" },
+  { key: "dividasOnus", label: "Dívidas e ônus reais", section: "Situações Especiais", precoUnitario: 10, descricaoUnidade: "por dívida" },
+  { key: "alugueisRecebidos", label: "Aluguéis recebidos", section: "Situações Especiais", precoUnitario: 15, descricaoUnidade: "por imóvel" },
 ];
 
-const STORAGE_KEY = "numer-irpf-pricing-config";
+export const DEFAULT_VALOR_BASE = 150;
+
+const STORAGE_KEY = "numer-irpf-pricing-config-v2";
 
 function loadConfig(): PricingConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
+      // Merge com defaults para garantir que novos itens sejam incluídos
+      const mergedItens = defaultItensPreco.map((def) => {
+        const found = parsed.itensPreco?.find((p: ItemPrecoConfig) => p.key === def.key);
+        return found ? { ...def, precoUnitario: found.precoUnitario } : { ...def };
+      });
       return {
-        pontos: { ...defaultPontosConfig, ...parsed.pontos },
-        faixas: parsed.faixas?.length ? parsed.faixas : [...defaultFaixas],
+        valorBase: parsed.valorBase ?? DEFAULT_VALOR_BASE,
+        itensPreco: mergedItens,
       };
     }
   } catch {}
-  return { pontos: { ...defaultPontosConfig }, faixas: [...defaultFaixas] };
+  return {
+    valorBase: DEFAULT_VALOR_BASE,
+    itensPreco: defaultItensPreco.map((i) => ({ ...i })),
+  };
 }
 
 function saveConfig(config: PricingConfig) {
@@ -166,27 +147,28 @@ function saveConfig(config: PricingConfig) {
 }
 
 const initialChecklist: ChecklistState = {
-  fontesRendimento: "1",
-  rendimentosIsentos: false,
-  rendimentosTributacaoExclusiva: false,
-  rendimentosRRA: false,
-  imoveis: "0",
-  veiculos: "0",
-  contasBancarias: "1-2",
-  criptoativos: false,
-  rendaVariavel: false,
-  dayTrade: false,
-  ganhoCapital: false,
-  rendimentosExterior: false,
-  dependentes: "0",
-  despesasMedicas: false,
-  despesasEducacao: false,
-  pensaoAlimenticia: false,
-  doacoesIncentivadas: false,
-  atividadeRural: false,
-  espolio: false,
-  dividasOnus: false,
-  alugueisRecebidos: false,
+  fontesRendimentoTributavel: 1,
+  rendimentosIsentos: 0,
+  rendimentosTributacaoExclusiva: 0,
+  rendimentosRRA: 0,
+  imoveis: 0,
+  veiculos: 0,
+  contasBancarias: 1,
+  aplicacoesFinanceiras: 0,
+  criptoativos: 0,
+  operacoesRendaVariavel: 0,
+  operacoesDayTrade: 0,
+  ganhoCapital: 0,
+  rendimentosExterior: 0,
+  dependentes: 0,
+  despesasMedicas: 0,
+  despesasEducacao: 0,
+  pensaoAlimenticia: 0,
+  doacoesIncentivadas: 0,
+  atividadeRural: 0,
+  espolio: 0,
+  dividasOnus: 0,
+  alugueisRecebidos: 0,
 };
 
 const initialClientData: ClientData = {
@@ -196,103 +178,41 @@ const initialClientData: ClientData = {
   email: "",
 };
 
-function calcularPontos(checklist: ChecklistState, pontos: PontosConfig): number {
-  let total = 0;
-
-  // Rendimentos
-  if (checklist.fontesRendimento === "2-3") total += pontos.fontesRendimento_2_3;
-  else if (checklist.fontesRendimento === "4+") total += pontos.fontesRendimento_4;
-  else total += pontos.fontesRendimento_1;
-
-  if (checklist.rendimentosIsentos) total += pontos.rendimentosIsentos;
-  if (checklist.rendimentosTributacaoExclusiva) total += pontos.rendimentosTributacaoExclusiva;
-  if (checklist.rendimentosRRA) total += pontos.rendimentosRRA;
-
-  // Bens e Patrimônio
-  if (checklist.imoveis === "1-2") total += pontos.imoveis_1_2;
-  else if (checklist.imoveis === "3+") total += pontos.imoveis_3;
-
-  if (checklist.veiculos === "1-2") total += pontos.veiculos_1_2;
-  else if (checklist.veiculos === "3+") total += pontos.veiculos_3;
-
-  if (checklist.contasBancarias === "3-5") total += pontos.contasBancarias_3_5;
-  else if (checklist.contasBancarias === "6+") total += pontos.contasBancarias_6;
-
-  if (checklist.criptoativos) total += pontos.criptoativos;
-
-  // Investimentos e Operações Especiais
-  if (checklist.rendaVariavel) total += pontos.rendaVariavel;
-  if (checklist.dayTrade) total += pontos.dayTrade;
-  if (checklist.ganhoCapital) total += pontos.ganhoCapital;
-  if (checklist.rendimentosExterior) total += pontos.rendimentosExterior;
-
-  // Deduções e Dependentes
-  if (checklist.dependentes === "1-2") total += pontos.dependentes_1_2;
-  else if (checklist.dependentes === "3+") total += pontos.dependentes_3;
-
-  if (checklist.despesasMedicas) total += pontos.despesasMedicas;
-  if (checklist.despesasEducacao) total += pontos.despesasEducacao;
-  if (checklist.pensaoAlimenticia) total += pontos.pensaoAlimenticia;
-  if (checklist.doacoesIncentivadas) total += pontos.doacoesIncentivadas;
-
-  // Situações Especiais
-  if (checklist.atividadeRural) total += pontos.atividadeRural;
-  if (checklist.espolio) total += pontos.espolio;
-  if (checklist.dividasOnus) total += pontos.dividasOnus;
-  if (checklist.alugueisRecebidos) total += pontos.alugueisRecebidos;
-
-  return total;
-}
-
-function determinarNivelComFaixas(
-  pontosTotais: number,
-  faixas: FaixaPreco[]
-): { nivel: ComplexityLevel; label: string; faixa: FaixaPreco } {
-  const niveis: ComplexityLevel[] = ["simples", "medio", "complexo", "muito_complexo", "muito_complexo"];
-  for (let i = 0; i < faixas.length; i++) {
-    if (pontosTotais <= faixas[i].pontosMax) {
-      return {
-        nivel: niveis[Math.min(i, niveis.length - 1)],
-        label: faixas[i].label,
-        faixa: faixas[i],
-      };
-    }
-  }
-  const last = faixas[faixas.length - 1];
-  return { nivel: "muito_complexo", label: last.label, faixa: last };
-}
-
 function identificarFichas(checklist: ChecklistState): string[] {
   const fichas: string[] = ["Identificação do Contribuinte"];
 
-  if (checklist.dependentes !== "0") fichas.push("Dependentes");
-
-  fichas.push("Rendimentos Tributáveis");
-
-  if (checklist.rendimentosIsentos) fichas.push("Rendimentos Isentos e Não Tributáveis");
-  if (checklist.rendimentosTributacaoExclusiva) fichas.push("Rendimentos Sujeitos à Tributação Exclusiva");
-  if (checklist.rendimentosRRA) fichas.push("Rendimentos Recebidos Acumuladamente (RRA)");
+  if (checklist.dependentes > 0) fichas.push("Dependentes");
+  if (checklist.fontesRendimentoTributavel > 0) fichas.push("Rendimentos Tributáveis");
+  if (checklist.rendimentosIsentos > 0) fichas.push("Rendimentos Isentos e Não Tributáveis");
+  if (checklist.rendimentosTributacaoExclusiva > 0) fichas.push("Rendimentos Sujeitos à Tributação Exclusiva");
+  if (checklist.rendimentosRRA > 0) fichas.push("Rendimentos Recebidos Acumuladamente (RRA)");
 
   fichas.push("Imposto Pago/Retido");
 
-  if (checklist.despesasMedicas || checklist.despesasEducacao || checklist.pensaoAlimenticia)
+  if (checklist.despesasMedicas > 0 || checklist.despesasEducacao > 0 || checklist.pensaoAlimenticia > 0)
     fichas.push("Pagamentos Efetuados");
-
-  if (checklist.doacoesIncentivadas) fichas.push("Doações Efetuadas");
-
-  if (checklist.imoveis !== "0" || checklist.veiculos !== "0" || checklist.criptoativos)
+  if (checklist.doacoesIncentivadas > 0) fichas.push("Doações Efetuadas");
+  if (checklist.imoveis > 0 || checklist.veiculos > 0 || checklist.contasBancarias > 0 || checklist.aplicacoesFinanceiras > 0 || checklist.criptoativos > 0)
     fichas.push("Bens e Direitos");
-
-  if (checklist.dividasOnus) fichas.push("Dívidas e Ônus Reais");
-  if (checklist.espolio) fichas.push("Espólio");
-  if (checklist.atividadeRural) fichas.push("Atividade Rural");
-  if (checklist.ganhoCapital) fichas.push("Ganhos de Capital");
-  if (checklist.rendaVariavel || checklist.dayTrade) fichas.push("Renda Variável");
-  if (checklist.criptoativos) fichas.push("Criptoativos");
-  if (checklist.rendimentosExterior) fichas.push("Rendimentos do Exterior");
-  if (checklist.alugueisRecebidos) fichas.push("Aluguéis Recebidos (Carnê-Leão)");
+  if (checklist.dividasOnus > 0) fichas.push("Dívidas e Ônus Reais");
+  if (checklist.espolio > 0) fichas.push("Espólio");
+  if (checklist.atividadeRural > 0) fichas.push("Atividade Rural");
+  if (checklist.ganhoCapital > 0) fichas.push("Ganhos de Capital");
+  if (checklist.operacoesRendaVariavel > 0 || checklist.operacoesDayTrade > 0) fichas.push("Renda Variável");
+  if (checklist.criptoativos > 0) fichas.push("Criptoativos");
+  if (checklist.rendimentosExterior > 0) fichas.push("Rendimentos do Exterior");
+  if (checklist.alugueisRecebidos > 0) fichas.push("Aluguéis Recebidos (Carnê-Leão)");
 
   return fichas;
+}
+
+function determinarNivel(totalItens: number, totalFichas: number): { nivel: ComplexityLevel; label: string } {
+  // Complexidade baseada na quantidade total de itens e fichas
+  const score = totalItens + totalFichas * 2;
+  if (score <= 10) return { nivel: "simples", label: "Simples" };
+  if (score <= 25) return { nivel: "medio", label: "Médio" };
+  if (score <= 50) return { nivel: "complexo", label: "Complexo" };
+  return { nivel: "muito_complexo", label: "Muito Complexo" };
 }
 
 export function useIRPFCalculator() {
@@ -301,28 +221,49 @@ export function useIRPFCalculator() {
   const [valorAjustado, setValorAjustado] = useState<number | null>(null);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig>(loadConfig);
 
-  // Persist config changes
   useEffect(() => {
     saveConfig(pricingConfig);
   }, [pricingConfig]);
 
   const resultado = useMemo<CalculationResult>(() => {
-    const pontosTotais = calcularPontos(checklist, pricingConfig.pontos);
-    const { nivel, label, faixa } = determinarNivelComFaixas(pontosTotais, pricingConfig.faixas);
+    const lineItems: LineItem[] = [];
+    let valorItens = 0;
+    let totalItens = 0;
+
+    for (const item of pricingConfig.itensPreco) {
+      const qtd = checklist[item.key];
+      if (qtd > 0) {
+        const subtotal = qtd * item.precoUnitario;
+        valorItens += subtotal;
+        totalItens += qtd;
+        lineItems.push({
+          label: item.label,
+          quantidade: qtd,
+          precoUnitario: item.precoUnitario,
+          subtotal,
+          descricaoUnidade: item.descricaoUnidade,
+        });
+      }
+    }
+
     const fichas = identificarFichas(checklist);
+    const { nivel, label } = determinarNivel(totalItens, fichas.length);
+    const valorTotal = pricingConfig.valorBase + valorItens;
 
     return {
-      pontos: pontosTotais,
       nivel,
       nivelLabel: label,
-      valorMinimo: faixa.valorMinimo,
-      valorMaximo: faixa.valorMaximo,
-      valorSugerido: faixa.valorSugerido,
+      valorBase: pricingConfig.valorBase,
+      valorItens,
+      valorTotal,
+      totalItens,
+      totalFichas: fichas.length,
+      lineItems,
       fichasIdentificadas: fichas,
     };
   }, [checklist, pricingConfig]);
 
-  const valorFinal = valorAjustado ?? resultado.valorSugerido;
+  const valorFinal = valorAjustado ?? resultado.valorTotal;
 
   const updateChecklist = useCallback(<K extends keyof ChecklistState>(
     key: K,
@@ -339,30 +280,25 @@ export function useIRPFCalculator() {
     setClientData((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const updatePontosConfig = useCallback(<K extends keyof PontosConfig>(
-    key: K,
-    value: PontosConfig[K]
-  ) => {
+  const updateItemPreco = useCallback((key: keyof ChecklistState, precoUnitario: number) => {
     setPricingConfig((prev) => ({
       ...prev,
-      pontos: { ...prev.pontos, [key]: value },
+      itensPreco: prev.itensPreco.map((item) =>
+        item.key === key ? { ...item, precoUnitario } : item
+      ),
     }));
     setValorAjustado(null);
   }, []);
 
-  const updateFaixa = useCallback((index: number, faixa: Partial<FaixaPreco>) => {
-    setPricingConfig((prev) => {
-      const newFaixas = [...prev.faixas];
-      newFaixas[index] = { ...newFaixas[index], ...faixa };
-      return { ...prev, faixas: newFaixas };
-    });
+  const updateValorBase = useCallback((valor: number) => {
+    setPricingConfig((prev) => ({ ...prev, valorBase: valor }));
     setValorAjustado(null);
   }, []);
 
   const resetConfig = useCallback(() => {
     setPricingConfig({
-      pontos: { ...defaultPontosConfig },
-      faixas: defaultFaixas.map((f) => ({ ...f })),
+      valorBase: DEFAULT_VALOR_BASE,
+      itensPreco: defaultItensPreco.map((i) => ({ ...i })),
     });
     setValorAjustado(null);
   }, []);
@@ -383,8 +319,8 @@ export function useIRPFCalculator() {
     setValorAjustado,
     updateChecklist,
     updateClientData,
-    updatePontosConfig,
-    updateFaixa,
+    updateItemPreco,
+    updateValorBase,
     resetConfig,
     resetAll,
   };

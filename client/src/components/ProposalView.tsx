@@ -1,6 +1,7 @@
 /*
  * ProposalView - Visualização e geração da proposta de orçamento
  * Design: Layout de documento profissional com identidade Numer
+ * Lógica: detalhamento de itens com preço unitário x quantidade
  */
 
 import { useRef } from "react";
@@ -16,6 +17,7 @@ import {
   User,
   Phone,
   Mail,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -67,9 +69,16 @@ function generateProposalText(
     clientData.telefone ? `Telefone: ${clientData.telefone}` : "",
     clientData.email ? `E-mail: ${clientData.email}` : "",
     ``,
-    `━━━ ANÁLISE DA DECLARAÇÃO ━━━`,
-    `Nível de complexidade: ${resultado.nivelLabel}`,
-    `Pontuação: ${resultado.pontos} pontos`,
+    `━━━ DETALHAMENTO DO ORÇAMENTO ━━━`,
+    `Valor base da declaração: ${formatCurrency(resultado.valorBase)}`,
+    ``,
+    ...resultado.lineItems.map(
+      (item) =>
+        `  ${item.label}: ${item.quantidade}x ${formatCurrency(item.precoUnitario)} = ${formatCurrency(item.subtotal)}`
+    ),
+    ``,
+    `Complexidade: ${resultado.nivelLabel}`,
+    `Total de itens: ${resultado.totalItens}`,
     ``,
     `Fichas a serem preenchidas:`,
     ...resultado.fichasIdentificadas.map((f) => `  ✓ ${f}`),
@@ -114,9 +123,15 @@ function generateWhatsAppText(
     clientData.nome ? `👤 *Cliente:* ${clientData.nome}` : "",
     clientData.cpf ? `📄 *CPF:* ${clientData.cpf}` : "",
     ``,
-    `📊 *Análise da Declaração*`,
+    `📊 *Detalhamento do Orçamento*`,
+    `Valor base: ${formatCurrency(resultado.valorBase)}`,
+    ``,
+    ...resultado.lineItems.map(
+      (item) =>
+        `  • ${item.label}: ${item.quantidade}x ${formatCurrency(item.precoUnitario)} = *${formatCurrency(item.subtotal)}*`
+    ),
+    ``,
     `Complexidade: *${resultado.nivelLabel}*`,
-    `Fichas identificadas: *${resultado.fichasIdentificadas.length}*`,
     ``,
     `📋 *Fichas a preencher:*`,
     ...resultado.fichasIdentificadas.map((f) => `  ✅ ${f}`),
@@ -292,25 +307,75 @@ export default function ProposalView({
               </div>
             )}
 
-            {/* Análise */}
+            {/* Detalhamento do orçamento */}
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2" style={{ fontFamily: "'Sora', sans-serif" }}>
                 <FileText className="w-4 h-4 text-orange-500" />
-                Análise da Declaração
+                Detalhamento do Orçamento
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-orange-50 rounded-xl p-4 text-center border border-orange-100">
-                  <p className="text-xs text-orange-600 font-medium mb-1">Complexidade</p>
-                  <p className="text-lg font-bold text-orange-700" style={{ fontFamily: "'Sora', sans-serif" }}>
-                    {resultado.nivelLabel}
-                  </p>
+
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                {/* Table header */}
+                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-[11px] text-gray-500 font-semibold uppercase tracking-wider">
+                  <div className="col-span-5">Item</div>
+                  <div className="col-span-2 text-center">Qtd</div>
+                  <div className="col-span-2 text-center">Unit.</div>
+                  <div className="col-span-3 text-right">Subtotal</div>
                 </div>
-                <div className="bg-orange-50 rounded-xl p-4 text-center border border-orange-100">
-                  <p className="text-xs text-orange-600 font-medium mb-1">Fichas</p>
-                  <p className="text-lg font-bold text-orange-700" style={{ fontFamily: "'Sora', sans-serif" }}>
-                    {resultado.fichasIdentificadas.length}
-                  </p>
+
+                {/* Valor base */}
+                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center border-b border-gray-100">
+                  <div className="col-span-5 flex items-center gap-2">
+                    <Package className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-sm text-gray-700">Valor base da declaração</span>
+                  </div>
+                  <div className="col-span-2 text-center text-sm text-gray-400">—</div>
+                  <div className="col-span-2 text-center text-sm text-gray-400">—</div>
+                  <div className="col-span-3 text-right text-sm font-medium text-gray-700">
+                    {formatCurrency(resultado.valorBase)}
+                  </div>
                 </div>
+
+                {/* Line items */}
+                {resultado.lineItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center border-b border-gray-50 last:border-b-0"
+                  >
+                    <div className="col-span-5">
+                      <span className="text-sm text-gray-700">{item.label}</span>
+                    </div>
+                    <div className="col-span-2 text-center text-sm text-gray-600">
+                      {item.quantidade}
+                    </div>
+                    <div className="col-span-2 text-center text-sm text-gray-500">
+                      {formatCurrency(item.precoUnitario)}
+                    </div>
+                    <div className="col-span-3 text-right text-sm font-medium text-orange-700">
+                      {formatCurrency(item.subtotal)}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Total */}
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center bg-orange-50 border-t border-orange-200">
+                  <div className="col-span-9">
+                    <span className="text-sm font-bold text-gray-800">Total</span>
+                  </div>
+                  <div className="col-span-3 text-right text-sm font-bold text-orange-700">
+                    {formatCurrency(resultado.valorTotal)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Complexidade */}
+              <div className="flex items-center justify-between mt-3 px-1">
+                <span className="text-xs text-gray-500">
+                  {resultado.totalItens} itens · {resultado.totalFichas} fichas
+                </span>
+                <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2.5 py-1 rounded-full">
+                  Complexidade: {resultado.nivelLabel}
+                </span>
               </div>
             </div>
 
@@ -334,12 +399,17 @@ export default function ProposalView({
 
             <Separator />
 
-            {/* Valor */}
+            {/* Valor final destacado */}
             <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl p-6 text-white text-center">
               <p className="text-sm text-white/80 mb-1">Valor do Serviço</p>
               <p className="text-3xl font-bold" style={{ fontFamily: "'Sora', sans-serif" }}>
                 {formatCurrency(valorFinal)}
               </p>
+              {valorFinal !== resultado.valorTotal && (
+                <p className="text-xs text-white/60 mt-1">
+                  (valor ajustado — calculado: {formatCurrency(resultado.valorTotal)})
+                </p>
+              )}
             </div>
 
             {/* Inclui */}

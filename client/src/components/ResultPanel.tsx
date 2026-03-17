@@ -1,17 +1,18 @@
 /*
  * ResultPanel - Painel lateral de resultado em tempo real
- * Design: Sticky sidebar com badge de complexidade, valor animado, fichas
+ * Design: Valor base + itens detalhados + complexidade + fichas
+ * Lógica: preço unitário x quantidade por item
  */
 
-import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gauge,
   FileCheck,
-  TrendingUp,
   ArrowRight,
   Minus,
   Plus,
+  Receipt,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,28 +27,20 @@ interface ResultPanelProps {
   onGerarProposta: () => void;
 }
 
-const complexityColors: Record<ComplexityLevel, { bg: string; text: string; bar: string; badge: string }> = {
+const complexityColors: Record<ComplexityLevel, { bar: string; badge: string }> = {
   simples: {
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
     bar: "bg-emerald-500",
     badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
   },
   medio: {
-    bg: "bg-amber-50",
-    text: "text-amber-700",
     bar: "bg-amber-500",
     badge: "bg-amber-100 text-amber-700 border-amber-200",
   },
   complexo: {
-    bg: "bg-orange-50",
-    text: "text-orange-700",
     bar: "bg-orange-500",
     badge: "bg-orange-100 text-orange-700 border-orange-200",
   },
   muito_complexo: {
-    bg: "bg-red-50",
-    text: "text-red-700",
     bar: "bg-red-500",
     badge: "bg-red-100 text-red-700 border-red-200",
   },
@@ -69,8 +62,9 @@ export default function ResultPanel({
   onGerarProposta,
 }: ResultPanelProps) {
   const colors = complexityColors[resultado.nivel];
-  const maxPontos = 120;
-  const barWidth = Math.min((resultado.pontos / maxPontos) * 100, 100);
+  const maxScore = 100;
+  const score = resultado.totalItens + resultado.totalFichas * 2;
+  const barWidth = Math.min((score / maxScore) * 100, 100);
 
   const adjustValue = (delta: number) => {
     const newVal = Math.max(0, valorFinal + delta);
@@ -79,7 +73,7 @@ export default function ResultPanel({
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      {/* Header com gradiente laranja */}
+      {/* Header com valor total */}
       <div className="relative px-5 py-5 bg-gradient-to-br from-orange-500 to-amber-500 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/20" />
@@ -104,13 +98,15 @@ export default function ResultPanel({
             {formatCurrency(valorFinal)}
           </motion.div>
 
-          <p className="text-xs text-white/70 mt-1">
-            Faixa: {formatCurrency(resultado.valorMinimo)} — {formatCurrency(resultado.valorMaximo)}
-          </p>
+          <div className="flex items-center gap-3 mt-2 text-xs text-white/70">
+            <span>Base: {formatCurrency(resultado.valorBase)}</span>
+            <span>+</span>
+            <span>Itens: {formatCurrency(resultado.valorItens)}</span>
+          </div>
         </div>
       </div>
 
-      <div className="p-5 space-y-5">
+      <div className="p-5 space-y-4">
         {/* Ajuste manual de valor */}
         <div>
           <label className="text-xs font-medium text-gray-500 mb-2 block">
@@ -153,10 +149,62 @@ export default function ResultPanel({
               onClick={() => onValorChange(null)}
               className="text-[11px] text-orange-500 hover:text-orange-600 mt-1.5 underline underline-offset-2"
             >
-              Restaurar valor sugerido ({formatCurrency(resultado.valorSugerido)})
+              Restaurar valor calculado ({formatCurrency(resultado.valorTotal)})
             </button>
           )}
         </div>
+
+        <Separator className="bg-gray-100" />
+
+        {/* Detalhamento dos itens */}
+        {resultado.lineItems.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-3">
+              <Receipt className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-500">
+                Detalhamento ({resultado.totalItens} itens)
+              </span>
+            </div>
+            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+              {/* Valor base */}
+              <div className="flex items-center justify-between text-xs py-1.5 px-2.5 bg-gray-50 rounded-md">
+                <div className="flex items-center gap-2">
+                  <Package className="w-3 h-3 text-gray-400" />
+                  <span className="text-gray-600">Valor base da declaração</span>
+                </div>
+                <span className="font-semibold text-gray-700">{formatCurrency(resultado.valorBase)}</span>
+              </div>
+              <AnimatePresence mode="popLayout">
+                {resultado.lineItems.map((item) => (
+                  <motion.div
+                    key={item.label}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center justify-between text-xs py-1.5 px-2.5 bg-orange-50/50 rounded-md"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+                      <span className="text-gray-600 truncate">{item.label}</span>
+                      <span className="text-gray-400 shrink-0">
+                        {item.quantidade}x {formatCurrency(item.precoUnitario)}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-orange-700 ml-2 shrink-0">
+                      {formatCurrency(item.subtotal)}
+                    </span>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {/* Total */}
+              <div className="flex items-center justify-between text-xs py-2 px-2.5 bg-orange-100/60 rounded-md border border-orange-200/50 mt-1">
+                <span className="font-semibold text-gray-700">Total calculado</span>
+                <span className="font-bold text-orange-700">{formatCurrency(resultado.valorTotal)}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Separator className="bg-gray-100" />
 
@@ -177,8 +225,7 @@ export default function ResultPanel({
             />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-[10px] text-gray-400">{resultado.pontos} pontos</span>
-            <span className="text-[10px] text-gray-400">máx. {maxPontos}</span>
+            <span className="text-[10px] text-gray-400">{resultado.totalItens} itens · {resultado.totalFichas} fichas</span>
           </div>
         </div>
 

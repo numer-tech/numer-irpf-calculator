@@ -26,8 +26,8 @@ export default function Home() {
     setValorAjustado,
     updateChecklist,
     updateClientData,
-    updatePontosConfig,
-    updateFaixa,
+    updateItemPreco,
+    updateValorBase,
     resetConfig,
     resetAll,
   } = useIRPFCalculator();
@@ -55,8 +55,8 @@ export default function Home() {
         open={showSettings}
         onOpenChange={setShowSettings}
         config={pricingConfig}
-        onUpdatePontos={updatePontosConfig}
-        onUpdateFaixa={updateFaixa}
+        onUpdateItemPreco={updateItemPreco}
+        onUpdateValorBase={updateValorBase}
         onResetConfig={resetConfig}
       />
 
@@ -80,8 +80,8 @@ export default function Home() {
               Calculadora de Orçamento IRPF 2026
             </h2>
             <p className="text-sm text-white/80 max-w-lg">
-              Preencha as informações do cliente e marque as fichas aplicáveis.
-              O valor do serviço será calculado automaticamente com base na complexidade.
+              Informe a quantidade de itens em cada ficha do cliente.
+              O valor do serviço será calculado automaticamente com base no preço unitário de cada item.
             </p>
           </motion.div>
         </div>
@@ -105,7 +105,11 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
             >
-              <ChecklistSection checklist={checklist} onChange={updateChecklist} />
+              <ChecklistSection
+                checklist={checklist}
+                onChange={updateChecklist}
+                itensPreco={pricingConfig.itensPreco}
+              />
             </motion.div>
           </div>
 
@@ -134,10 +138,9 @@ export default function Home() {
                 className="mt-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm"
               >
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  Os valores são calculados com base na complexidade das informações
-                  a serem declaradas. Você pode ajustar o valor manualmente antes de
-                  gerar a proposta para o cliente. Use o botão <strong>"Configurar Valores"</strong> no
-                  topo para personalizar a tabela de pontuação e faixas de preço.
+                  O valor é calculado somando o <strong>valor base</strong> da declaração com o
+                  preço unitário de cada item multiplicado pela quantidade informada.
+                  Use <strong>"Configurar Valores"</strong> para personalizar os preços.
                 </p>
               </motion.div>
             </div>

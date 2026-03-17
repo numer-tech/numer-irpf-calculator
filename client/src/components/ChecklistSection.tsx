@@ -1,342 +1,168 @@
 /*
- * ChecklistSection - Seções do checklist IRPF
- * Design: Cards com switches/selects, feedback visual imediato
+ * ChecklistSection - Checklist de fichas IRPF com quantidade por item
+ * Design: Corporate Dashboard Moderno - preço unitário x quantidade
+ * Identidade: Numer Contabilidade (laranja, branco, cinza)
  */
 
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { ChecklistState } from "@/hooks/useIRPFCalculator";
+import { Minus, Plus } from "lucide-react";
 import {
   Banknote,
   Building2,
-  Car,
-  CreditCard,
-  Bitcoin,
   TrendingUp,
-  Zap,
-  Globe,
   Users,
-  Heart,
-  GraduationCap,
-  Scale,
-  Gift,
-  Tractor,
-  ScrollText,
-  Landmark,
-  Home,
-  BarChart3,
+  AlertTriangle,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { ChecklistState, ItemPrecoConfig } from "@/hooks/useIRPFCalculator";
 
 interface ChecklistSectionProps {
   checklist: ChecklistState;
   onChange: <K extends keyof ChecklistState>(key: K, value: ChecklistState[K]) => void;
+  itensPreco: ItemPrecoConfig[];
 }
 
-interface SectionConfig {
-  title: string;
-  icon: LucideIcon;
-  items: ItemConfig[];
+interface SectionVisual {
+  icon: React.ReactNode;
+  color: string;
 }
 
-interface ItemConfig {
-  type: "switch" | "select";
-  key: keyof ChecklistState;
-  label: string;
-  icon: LucideIcon;
-  options?: { value: string; label: string }[];
-  pontos?: string;
+const sectionVisuals: Record<string, SectionVisual> = {
+  "Rendimentos": {
+    icon: <Banknote className="w-3.5 h-3.5 text-orange-600" />,
+    color: "bg-orange-100",
+  },
+  "Bens e Patrimônio": {
+    icon: <Building2 className="w-3.5 h-3.5 text-amber-600" />,
+    color: "bg-amber-100",
+  },
+  "Investimentos e Operações Especiais": {
+    icon: <TrendingUp className="w-3.5 h-3.5 text-orange-700" />,
+    color: "bg-orange-100",
+  },
+  "Deduções e Dependentes": {
+    icon: <Users className="w-3.5 h-3.5 text-amber-700" />,
+    color: "bg-amber-100",
+  },
+  "Situações Especiais": {
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-red-600" />,
+    color: "bg-red-100",
+  },
+};
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  }).format(value);
 }
 
-const sections: SectionConfig[] = [
-  {
-    title: "Rendimentos",
-    icon: Banknote,
-    items: [
-      {
-        type: "select",
-        key: "fontesRendimento",
-        label: "Fontes de rendimento tributável",
-        icon: Banknote,
-        options: [
-          { value: "1", label: "1 fonte" },
-          { value: "2-3", label: "2 a 3 fontes" },
-          { value: "4+", label: "4 ou mais fontes" },
-        ],
-      },
-      {
-        type: "switch",
-        key: "rendimentosIsentos",
-        label: "Rendimentos isentos / não tributáveis",
-        icon: Banknote,
-        pontos: "+3 pts",
-      },
-      {
-        type: "switch",
-        key: "rendimentosTributacaoExclusiva",
-        label: "Tributação exclusiva (13º, PLR, aplicações)",
-        icon: Banknote,
-        pontos: "+4 pts",
-      },
-      {
-        type: "switch",
-        key: "rendimentosRRA",
-        label: "Rendimentos recebidos acumuladamente (RRA)",
-        icon: ScrollText,
-        pontos: "+8 pts",
-      },
-    ],
-  },
-  {
-    title: "Bens e Patrimônio",
-    icon: Building2,
-    items: [
-      {
-        type: "select",
-        key: "imoveis",
-        label: "Imóveis",
-        icon: Building2,
-        options: [
-          { value: "0", label: "Nenhum" },
-          { value: "1-2", label: "1 a 2 imóveis" },
-          { value: "3+", label: "3 ou mais imóveis" },
-        ],
-      },
-      {
-        type: "select",
-        key: "veiculos",
-        label: "Veículos",
-        icon: Car,
-        options: [
-          { value: "0", label: "Nenhum" },
-          { value: "1-2", label: "1 a 2 veículos" },
-          { value: "3+", label: "3 ou mais veículos" },
-        ],
-      },
-      {
-        type: "select",
-        key: "contasBancarias",
-        label: "Contas bancárias e aplicações",
-        icon: CreditCard,
-        options: [
-          { value: "1-2", label: "1 a 2 contas" },
-          { value: "3-5", label: "3 a 5 contas" },
-          { value: "6+", label: "6 ou mais contas" },
-        ],
-      },
-      {
-        type: "switch",
-        key: "criptoativos",
-        label: "Criptoativos",
-        icon: Bitcoin,
-        pontos: "+15 pts",
-      },
-    ],
-  },
-  {
-    title: "Investimentos e Operações Especiais",
-    icon: TrendingUp,
-    items: [
-      {
-        type: "switch",
-        key: "rendaVariavel",
-        label: "Renda variável (ações, FIIs)",
-        icon: BarChart3,
-        pontos: "+15 pts",
-      },
-      {
-        type: "switch",
-        key: "dayTrade",
-        label: "Day trade",
-        icon: Zap,
-        pontos: "+20 pts",
-      },
-      {
-        type: "switch",
-        key: "ganhoCapital",
-        label: "Ganho de capital (venda de bens)",
-        icon: TrendingUp,
-        pontos: "+12 pts",
-      },
-      {
-        type: "switch",
-        key: "rendimentosExterior",
-        label: "Rendimentos do exterior",
-        icon: Globe,
-        pontos: "+18 pts",
-      },
-    ],
-  },
-  {
-    title: "Deduções e Dependentes",
-    icon: Users,
-    items: [
-      {
-        type: "select",
-        key: "dependentes",
-        label: "Dependentes",
-        icon: Users,
-        options: [
-          { value: "0", label: "Nenhum" },
-          { value: "1-2", label: "1 a 2 dependentes" },
-          { value: "3+", label: "3 ou mais dependentes" },
-        ],
-      },
-      {
-        type: "switch",
-        key: "despesasMedicas",
-        label: "Despesas médicas",
-        icon: Heart,
-        pontos: "+4 pts",
-      },
-      {
-        type: "switch",
-        key: "despesasEducacao",
-        label: "Despesas com educação",
-        icon: GraduationCap,
-        pontos: "+3 pts",
-      },
-      {
-        type: "switch",
-        key: "pensaoAlimenticia",
-        label: "Pensão alimentícia",
-        icon: Scale,
-        pontos: "+5 pts",
-      },
-      {
-        type: "switch",
-        key: "doacoesIncentivadas",
-        label: "Doações incentivadas (ECA, idoso, cultura)",
-        icon: Gift,
-        pontos: "+3 pts",
-      },
-    ],
-  },
-  {
-    title: "Situações Especiais",
-    icon: Landmark,
-    items: [
-      {
-        type: "switch",
-        key: "atividadeRural",
-        label: "Atividade rural",
-        icon: Tractor,
-        pontos: "+15 pts",
-      },
-      {
-        type: "switch",
-        key: "espolio",
-        label: "Espólio / herança",
-        icon: ScrollText,
-        pontos: "+20 pts",
-      },
-      {
-        type: "switch",
-        key: "dividasOnus",
-        label: "Dívidas e ônus reais",
-        icon: Landmark,
-        pontos: "+4 pts",
-      },
-      {
-        type: "switch",
-        key: "alugueisRecebidos",
-        label: "Aluguéis recebidos",
-        icon: Home,
-        pontos: "+8 pts",
-      },
-    ],
-  },
-];
+export default function ChecklistSection({ checklist, onChange, itensPreco }: ChecklistSectionProps) {
+  // Agrupar itens por seção
+  const sections = itensPreco.reduce<Record<string, ItemPrecoConfig[]>>((acc, item) => {
+    if (!acc[item.section]) acc[item.section] = [];
+    acc[item.section].push(item);
+    return acc;
+  }, {});
 
-export default function ChecklistSection({ checklist, onChange }: ChecklistSectionProps) {
   return (
     <div className="space-y-4">
-      {sections.map((section) => {
-        const SectionIcon = section.icon;
+      {Object.entries(sections).map(([sectionName, items]) => {
+        const visual = sectionVisuals[sectionName] || {
+          icon: <Banknote className="w-3.5 h-3.5 text-gray-600" />,
+          color: "bg-gray-100",
+        };
+
+        // Calcular subtotal da seção
+        const sectionSubtotal = items.reduce((sum, item) => {
+          const qty = checklist[item.key] as number;
+          return sum + qty * item.precoUnitario;
+        }, 0);
+
         return (
           <div
-            key={section.title}
+            key={sectionName}
             className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
           >
+            {/* Section header */}
             <div className="px-5 py-3.5 bg-gradient-to-r from-orange-50 to-amber-50/50 border-b border-orange-100/50">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
-                  <SectionIcon className="w-3.5 h-3.5 text-orange-600" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-lg ${visual.color} flex items-center justify-center`}>
+                    {visual.icon}
+                  </div>
+                  <h2
+                    className="text-sm font-semibold text-gray-800"
+                    style={{ fontFamily: "'Sora', sans-serif" }}
+                  >
+                    {sectionName}
+                  </h2>
                 </div>
-                <h2 className="text-sm font-semibold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
-                  {section.title}
-                </h2>
+                {sectionSubtotal > 0 && (
+                  <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2.5 py-1 rounded-full">
+                    {formatCurrency(sectionSubtotal)}
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="p-4 space-y-1">
-              {section.items.map((item) => {
-                const ItemIcon = item.icon;
-                const currentValue = checklist[item.key];
-
-                if (item.type === "select" && item.options) {
-                  return (
-                    <div
-                      key={item.key}
-                      className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-gray-50/80 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <ItemIcon className="w-4 h-4 text-gray-400" />
-                        <Label className="text-sm text-gray-700 font-normal cursor-default">
-                          {item.label}
-                        </Label>
-                      </div>
-                      <Select
-                        value={currentValue as string}
-                        onValueChange={(val) => onChange(item.key, val as any)}
-                      >
-                        <SelectTrigger className="w-[160px] h-8 text-xs bg-white border-gray-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {item.options.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  );
-                }
+            {/* Items */}
+            <div className="divide-y divide-gray-50">
+              {items.map((item) => {
+                const qty = checklist[item.key] as number;
+                const subtotal = qty * item.precoUnitario;
+                const isActive = qty > 0;
 
                 return (
                   <div
                     key={item.key}
-                    className={`flex items-center justify-between py-2.5 px-3 rounded-lg transition-all ${
-                      currentValue
-                        ? "bg-orange-50/60 border border-orange-100/60"
-                        : "hover:bg-gray-50/80 border border-transparent"
+                    className={`flex items-center justify-between px-5 py-3 transition-colors ${
+                      isActive ? "bg-orange-50/30" : "hover:bg-gray-50/50"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <ItemIcon className={`w-4 h-4 ${currentValue ? "text-orange-500" : "text-gray-400"}`} />
-                      <Label
-                        htmlFor={item.key}
-                        className={`text-sm font-normal cursor-pointer ${
-                          currentValue ? "text-gray-800" : "text-gray-700"
+                    <div className="flex-1 min-w-0 mr-4">
+                      <p className={`text-sm ${isActive ? "text-gray-800 font-medium" : "text-gray-700"}`}>
+                        {item.label}
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {formatCurrency(item.precoUnitario)} {item.descricaoUnidade}
+                        {isActive && (
+                          <span className="text-orange-600 font-semibold ml-1.5">
+                            — {formatCurrency(subtotal)}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Quantity controls */}
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg border-gray-200 hover:border-orange-300 hover:bg-orange-50 disabled:opacity-30"
+                        onClick={() => onChange(item.key, Math.max(0, qty - 1) as any)}
+                        disabled={qty <= 0}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <div
+                        className={`w-10 h-7 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                          isActive
+                            ? "bg-orange-500 text-white"
+                            : "bg-gray-100 text-gray-400"
                         }`}
                       >
-                        {item.label}
-                      </Label>
-                      {item.pontos && currentValue && (
-                        <span className="text-[10px] font-medium text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded-full">
-                          {item.pontos}
-                        </span>
-                      )}
+                        {qty}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg border-gray-200 hover:border-orange-300 hover:bg-orange-50"
+                        onClick={() => onChange(item.key, (qty + 1) as any)}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
                     </div>
-                    <Switch
-                      id={item.key}
-                      checked={currentValue as boolean}
-                      onCheckedChange={(val) => onChange(item.key, val as any)}
-                      className="data-[state=checked]:bg-orange-500"
-                    />
                   </div>
                 );
               })}
