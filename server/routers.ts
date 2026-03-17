@@ -503,6 +503,13 @@ export const appRouter = router({
 
   // ─── Gerenciamento de usuários (admin da empresa ou superadmin) ─────────
   usuario: router({
+    /** Listar usuários de uma empresa específica (superadmin) */
+    listByEmpresa: superAdminProcedure
+      .input(z.object({ empresaId: z.number() }))
+      .query(async ({ input }) => {
+        return listInternalUsersByEmpresa(input.empresaId);
+      }),
+
     /** Listar usuários (admin vê da empresa, superadmin vê todos) */
     list: internalAdminProcedure.query(async ({ ctx }) => {
       const user = ctx.internalUser!;

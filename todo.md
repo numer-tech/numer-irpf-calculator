@@ -115,3 +115,11 @@
 - [x] Investigar como a rota branding seleciona a empresa exibida no login
 - [x] Permitir que o login exiba a empresa correta (Numer como principal/padrão)
 - [x] Testar e salvar checkpoint
+
+# TODO - Gestão de Usuários por Empresa no Painel Superadmin
+
+- [x] Adicionar botão "Ver Usuários" em cada card de empresa
+- [x] Criar painel expandido com lista de usuários da empresa
+- [x] Permitir criar novo usuário vinculado à empresa
+- [x] Permitir remover usuário da empresa
+- [x] Testar e salvar checkpoint
