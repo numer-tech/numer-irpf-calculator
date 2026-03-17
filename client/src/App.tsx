@@ -13,6 +13,7 @@ import MinhaEmpresa from "./pages/MinhaEmpresa";
 import { useInternalAuth } from "./hooks/useInternalAuth";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 /** Aplica as CSS variables da empresa dinamicamente */
 function EmpresaThemeInjector() {
@@ -56,20 +57,41 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function LoginRoute() {
+  const { isAuthenticated, refetch } = useInternalAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
+  if (isAuthenticated) return null;
+
+  return <Login onSuccess={() => { refetch(); navigate("/"); }} />;
+}
+
 function Router() {
   return (
-    <AuthGuard>
-      <EmpresaThemeInjector />
-      <Switch>
-        <Route path={"/"} component={Home} />
-        <Route path={"/historico"} component={Historico} />
-        <Route path={"/usuarios"} component={Usuarios} />
-        <Route path={"/empresas"} component={Empresas} />
-        <Route path={"/minha-empresa"} component={MinhaEmpresa} />
-        <Route path={"/404"} component={NotFound} />
-        <Route component={NotFound} />
-      </Switch>
-    </AuthGuard>
+    <Switch>
+      {/* Rota /login pública: permite acesso com ?empresa=ID sem auth guard */}
+      <Route path="/login" component={LoginRoute} />
+      <Route>
+        <AuthGuard>
+          <EmpresaThemeInjector />
+          <Switch>
+            <Route path={"/"} component={Home} />
+            <Route path={"/historico"} component={Historico} />
+            <Route path={"/usuarios"} component={Usuarios} />
+            <Route path={"/empresas"} component={Empresas} />
+            <Route path={"/minha-empresa"} component={MinhaEmpresa} />
+            <Route path={"/404"} component={NotFound} />
+            <Route component={NotFound} />
+          </Switch>
+        </AuthGuard>
+      </Route>
+    </Switch>
   );
 }
 

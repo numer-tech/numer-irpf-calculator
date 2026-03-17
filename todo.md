@@ -123,3 +123,8 @@
 - [x] Permitir criar novo usuário vinculado à empresa
 - [x] Permitir remover usuário da empresa
 - [x] Testar e salvar checkpoint
+
+# TODO - Bug Fix: 404 em /login?empresa=2
+
+- [x] Corrigir servidor Express para servir index.html em todas as rotas SPA (incluindo query params)
+- [x] Testar e salvar checkpoint
