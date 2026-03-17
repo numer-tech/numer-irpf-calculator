@@ -5,16 +5,17 @@
  * Tipografia: Sora (heading)
  */
 
-import { Calculator, RotateCcw } from "lucide-react";
+import { Calculator, RotateCcw, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 
 interface HeaderProps {
   onReset: () => void;
+  onOpenSettings: () => void;
 }
 
-export default function Header({ onReset }: HeaderProps) {
+export default function Header({ onReset, onOpenSettings }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100/60">
       <div className="container flex items-center justify-between h-16">
@@ -39,6 +40,15 @@ export default function Header({ onReset }: HeaderProps) {
             <Calculator className="w-3.5 h-3.5 text-orange-600" />
             <span className="text-xs font-medium text-orange-700">Uso Interno</span>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenSettings}
+            className="text-gray-500 hover:text-orange-600 hover:border-orange-200 gap-1.5"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Configurar Valores</span>
+          </Button>
           <Button
             variant="outline"
             size="sm"

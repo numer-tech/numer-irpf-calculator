@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 
 export interface ClientData {
   nome: string;
@@ -52,6 +52,119 @@ export interface CalculationResult {
   fichasIdentificadas: string[];
 }
 
+// --- Configuração de Pontuação ---
+export interface PontosConfig {
+  // Rendimentos
+  fontesRendimento_1: number;
+  fontesRendimento_2_3: number;
+  fontesRendimento_4: number;
+  rendimentosIsentos: number;
+  rendimentosTributacaoExclusiva: number;
+  rendimentosRRA: number;
+
+  // Bens e Patrimônio
+  imoveis_1_2: number;
+  imoveis_3: number;
+  veiculos_1_2: number;
+  veiculos_3: number;
+  contasBancarias_3_5: number;
+  contasBancarias_6: number;
+  criptoativos: number;
+
+  // Investimentos
+  rendaVariavel: number;
+  dayTrade: number;
+  ganhoCapital: number;
+  rendimentosExterior: number;
+
+  // Deduções
+  dependentes_1_2: number;
+  dependentes_3: number;
+  despesasMedicas: number;
+  despesasEducacao: number;
+  pensaoAlimenticia: number;
+  doacoesIncentivadas: number;
+
+  // Situações Especiais
+  atividadeRural: number;
+  espolio: number;
+  dividasOnus: number;
+  alugueisRecebidos: number;
+}
+
+export interface FaixaPreco {
+  label: string;
+  pontosMax: number;
+  valorMinimo: number;
+  valorMaximo: number;
+  valorSugerido: number;
+}
+
+export interface PricingConfig {
+  pontos: PontosConfig;
+  faixas: FaixaPreco[];
+}
+
+export const defaultPontosConfig: PontosConfig = {
+  fontesRendimento_1: 2,
+  fontesRendimento_2_3: 5,
+  fontesRendimento_4: 12,
+  rendimentosIsentos: 3,
+  rendimentosTributacaoExclusiva: 4,
+  rendimentosRRA: 8,
+  imoveis_1_2: 5,
+  imoveis_3: 12,
+  veiculos_1_2: 3,
+  veiculos_3: 7,
+  contasBancarias_3_5: 5,
+  contasBancarias_6: 10,
+  criptoativos: 15,
+  rendaVariavel: 15,
+  dayTrade: 20,
+  ganhoCapital: 12,
+  rendimentosExterior: 18,
+  dependentes_1_2: 4,
+  dependentes_3: 8,
+  despesasMedicas: 4,
+  despesasEducacao: 3,
+  pensaoAlimenticia: 5,
+  doacoesIncentivadas: 3,
+  atividadeRural: 15,
+  espolio: 20,
+  dividasOnus: 4,
+  alugueisRecebidos: 8,
+};
+
+export const defaultFaixas: FaixaPreco[] = [
+  { label: "Simples", pontosMax: 15, valorMinimo: 150, valorMaximo: 250, valorSugerido: 200 },
+  { label: "Médio", pontosMax: 35, valorMinimo: 250, valorMaximo: 450, valorSugerido: 350 },
+  { label: "Complexo", pontosMax: 60, valorMinimo: 450, valorMaximo: 750, valorSugerido: 600 },
+  { label: "Muito Complexo", pontosMax: 90, valorMinimo: 750, valorMaximo: 1200, valorSugerido: 950 },
+  { label: "Excepcional", pontosMax: 999, valorMinimo: 1200, valorMaximo: 2000, valorSugerido: 1500 },
+];
+
+const STORAGE_KEY = "numer-irpf-pricing-config";
+
+function loadConfig(): PricingConfig {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        pontos: { ...defaultPontosConfig, ...parsed.pontos },
+        faixas: parsed.faixas?.length ? parsed.faixas : [...defaultFaixas],
+      };
+    }
+  } catch {}
+  return { pontos: { ...defaultPontosConfig }, faixas: [...defaultFaixas] };
+}
+
+function saveConfig(config: PricingConfig) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  } catch {}
+}
+
 const initialChecklist: ChecklistState = {
   fontesRendimento: "1",
   rendimentosIsentos: false,
@@ -83,67 +196,70 @@ const initialClientData: ClientData = {
   email: "",
 };
 
-function calcularPontos(checklist: ChecklistState): number {
-  let pontos = 0;
+function calcularPontos(checklist: ChecklistState, pontos: PontosConfig): number {
+  let total = 0;
 
   // Rendimentos
-  if (checklist.fontesRendimento === "2-3") pontos += 5;
-  else if (checklist.fontesRendimento === "4+") pontos += 12;
-  else pontos += 2;
+  if (checklist.fontesRendimento === "2-3") total += pontos.fontesRendimento_2_3;
+  else if (checklist.fontesRendimento === "4+") total += pontos.fontesRendimento_4;
+  else total += pontos.fontesRendimento_1;
 
-  if (checklist.rendimentosIsentos) pontos += 3;
-  if (checklist.rendimentosTributacaoExclusiva) pontos += 4;
-  if (checklist.rendimentosRRA) pontos += 8;
+  if (checklist.rendimentosIsentos) total += pontos.rendimentosIsentos;
+  if (checklist.rendimentosTributacaoExclusiva) total += pontos.rendimentosTributacaoExclusiva;
+  if (checklist.rendimentosRRA) total += pontos.rendimentosRRA;
 
   // Bens e Patrimônio
-  if (checklist.imoveis === "1-2") pontos += 5;
-  else if (checklist.imoveis === "3+") pontos += 12;
+  if (checklist.imoveis === "1-2") total += pontos.imoveis_1_2;
+  else if (checklist.imoveis === "3+") total += pontos.imoveis_3;
 
-  if (checklist.veiculos === "1-2") pontos += 3;
-  else if (checklist.veiculos === "3+") pontos += 7;
+  if (checklist.veiculos === "1-2") total += pontos.veiculos_1_2;
+  else if (checklist.veiculos === "3+") total += pontos.veiculos_3;
 
-  if (checklist.contasBancarias === "3-5") pontos += 5;
-  else if (checklist.contasBancarias === "6+") pontos += 10;
+  if (checklist.contasBancarias === "3-5") total += pontos.contasBancarias_3_5;
+  else if (checklist.contasBancarias === "6+") total += pontos.contasBancarias_6;
 
-  if (checklist.criptoativos) pontos += 15;
+  if (checklist.criptoativos) total += pontos.criptoativos;
 
   // Investimentos e Operações Especiais
-  if (checklist.rendaVariavel) pontos += 15;
-  if (checklist.dayTrade) pontos += 20;
-  if (checklist.ganhoCapital) pontos += 12;
-  if (checklist.rendimentosExterior) pontos += 18;
+  if (checklist.rendaVariavel) total += pontos.rendaVariavel;
+  if (checklist.dayTrade) total += pontos.dayTrade;
+  if (checklist.ganhoCapital) total += pontos.ganhoCapital;
+  if (checklist.rendimentosExterior) total += pontos.rendimentosExterior;
 
   // Deduções e Dependentes
-  if (checklist.dependentes === "1-2") pontos += 4;
-  else if (checklist.dependentes === "3+") pontos += 8;
+  if (checklist.dependentes === "1-2") total += pontos.dependentes_1_2;
+  else if (checklist.dependentes === "3+") total += pontos.dependentes_3;
 
-  if (checklist.despesasMedicas) pontos += 4;
-  if (checklist.despesasEducacao) pontos += 3;
-  if (checklist.pensaoAlimenticia) pontos += 5;
-  if (checklist.doacoesIncentivadas) pontos += 3;
+  if (checklist.despesasMedicas) total += pontos.despesasMedicas;
+  if (checklist.despesasEducacao) total += pontos.despesasEducacao;
+  if (checklist.pensaoAlimenticia) total += pontos.pensaoAlimenticia;
+  if (checklist.doacoesIncentivadas) total += pontos.doacoesIncentivadas;
 
   // Situações Especiais
-  if (checklist.atividadeRural) pontos += 15;
-  if (checklist.espolio) pontos += 20;
-  if (checklist.dividasOnus) pontos += 4;
-  if (checklist.alugueisRecebidos) pontos += 8;
+  if (checklist.atividadeRural) total += pontos.atividadeRural;
+  if (checklist.espolio) total += pontos.espolio;
+  if (checklist.dividasOnus) total += pontos.dividasOnus;
+  if (checklist.alugueisRecebidos) total += pontos.alugueisRecebidos;
 
-  return pontos;
+  return total;
 }
 
-function determinarNivel(pontos: number): { nivel: ComplexityLevel; label: string } {
-  if (pontos <= 15) return { nivel: "simples", label: "Simples" };
-  if (pontos <= 35) return { nivel: "medio", label: "Médio" };
-  if (pontos <= 60) return { nivel: "complexo", label: "Complexo" };
-  return { nivel: "muito_complexo", label: "Muito Complexo" };
-}
-
-function calcularValor(pontos: number): { min: number; max: number; sugerido: number } {
-  if (pontos <= 15) return { min: 150, max: 250, sugerido: 200 };
-  if (pontos <= 35) return { min: 250, max: 450, sugerido: 350 };
-  if (pontos <= 60) return { min: 450, max: 750, sugerido: 600 };
-  if (pontos <= 90) return { min: 750, max: 1200, sugerido: 950 };
-  return { min: 1200, max: 2000, sugerido: 1500 };
+function determinarNivelComFaixas(
+  pontosTotais: number,
+  faixas: FaixaPreco[]
+): { nivel: ComplexityLevel; label: string; faixa: FaixaPreco } {
+  const niveis: ComplexityLevel[] = ["simples", "medio", "complexo", "muito_complexo", "muito_complexo"];
+  for (let i = 0; i < faixas.length; i++) {
+    if (pontosTotais <= faixas[i].pontosMax) {
+      return {
+        nivel: niveis[Math.min(i, niveis.length - 1)],
+        label: faixas[i].label,
+        faixa: faixas[i],
+      };
+    }
+  }
+  const last = faixas[faixas.length - 1];
+  return { nivel: "muito_complexo", label: last.label, faixa: last };
 }
 
 function identificarFichas(checklist: ChecklistState): string[] {
@@ -183,23 +299,28 @@ export function useIRPFCalculator() {
   const [clientData, setClientData] = useState<ClientData>(initialClientData);
   const [checklist, setChecklist] = useState<ChecklistState>(initialChecklist);
   const [valorAjustado, setValorAjustado] = useState<number | null>(null);
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig>(loadConfig);
+
+  // Persist config changes
+  useEffect(() => {
+    saveConfig(pricingConfig);
+  }, [pricingConfig]);
 
   const resultado = useMemo<CalculationResult>(() => {
-    const pontos = calcularPontos(checklist);
-    const { nivel, label } = determinarNivel(pontos);
-    const { min, max, sugerido } = calcularValor(pontos);
+    const pontosTotais = calcularPontos(checklist, pricingConfig.pontos);
+    const { nivel, label, faixa } = determinarNivelComFaixas(pontosTotais, pricingConfig.faixas);
     const fichas = identificarFichas(checklist);
 
     return {
-      pontos,
+      pontos: pontosTotais,
       nivel,
       nivelLabel: label,
-      valorMinimo: min,
-      valorMaximo: max,
-      valorSugerido: sugerido,
+      valorMinimo: faixa.valorMinimo,
+      valorMaximo: faixa.valorMaximo,
+      valorSugerido: faixa.valorSugerido,
       fichasIdentificadas: fichas,
     };
-  }, [checklist]);
+  }, [checklist, pricingConfig]);
 
   const valorFinal = valorAjustado ?? resultado.valorSugerido;
 
@@ -218,6 +339,34 @@ export function useIRPFCalculator() {
     setClientData((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const updatePontosConfig = useCallback(<K extends keyof PontosConfig>(
+    key: K,
+    value: PontosConfig[K]
+  ) => {
+    setPricingConfig((prev) => ({
+      ...prev,
+      pontos: { ...prev.pontos, [key]: value },
+    }));
+    setValorAjustado(null);
+  }, []);
+
+  const updateFaixa = useCallback((index: number, faixa: Partial<FaixaPreco>) => {
+    setPricingConfig((prev) => {
+      const newFaixas = [...prev.faixas];
+      newFaixas[index] = { ...newFaixas[index], ...faixa };
+      return { ...prev, faixas: newFaixas };
+    });
+    setValorAjustado(null);
+  }, []);
+
+  const resetConfig = useCallback(() => {
+    setPricingConfig({
+      pontos: { ...defaultPontosConfig },
+      faixas: defaultFaixas.map((f) => ({ ...f })),
+    });
+    setValorAjustado(null);
+  }, []);
+
   const resetAll = useCallback(() => {
     setChecklist(initialChecklist);
     setClientData(initialClientData);
@@ -230,9 +379,13 @@ export function useIRPFCalculator() {
     resultado,
     valorFinal,
     valorAjustado,
+    pricingConfig,
     setValorAjustado,
     updateChecklist,
     updateClientData,
+    updatePontosConfig,
+    updateFaixa,
+    resetConfig,
     resetAll,
   };
 }

@@ -12,6 +12,7 @@ import ClientDataForm from "@/components/ClientDataForm";
 import ChecklistSection from "@/components/ChecklistSection";
 import ResultPanel from "@/components/ResultPanel";
 import ProposalView from "@/components/ProposalView";
+import SettingsPanel from "@/components/SettingsPanel";
 import { useIRPFCalculator } from "@/hooks/useIRPFCalculator";
 
 export default function Home() {
@@ -21,13 +22,18 @@ export default function Home() {
     resultado,
     valorFinal,
     valorAjustado,
+    pricingConfig,
     setValorAjustado,
     updateChecklist,
     updateClientData,
+    updatePontosConfig,
+    updateFaixa,
+    resetConfig,
     resetAll,
   } = useIRPFCalculator();
 
   const [showProposal, setShowProposal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   if (showProposal) {
     return (
@@ -42,7 +48,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      <Header onReset={resetAll} />
+      <Header onReset={resetAll} onOpenSettings={() => setShowSettings(true)} />
+
+      {/* Settings Panel */}
+      <SettingsPanel
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        config={pricingConfig}
+        onUpdatePontos={updatePontosConfig}
+        onUpdateFaixa={updateFaixa}
+        onResetConfig={resetConfig}
+      />
 
       {/* Hero banner sutil */}
       <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-400 to-amber-400">
@@ -120,7 +136,8 @@ export default function Home() {
                 <p className="text-xs text-gray-500 leading-relaxed">
                   Os valores são calculados com base na complexidade das informações
                   a serem declaradas. Você pode ajustar o valor manualmente antes de
-                  gerar a proposta para o cliente.
+                  gerar a proposta para o cliente. Use o botão <strong>"Configurar Valores"</strong> no
+                  topo para personalizar a tabela de pontuação e faixas de preço.
                 </p>
               </motion.div>
             </div>
