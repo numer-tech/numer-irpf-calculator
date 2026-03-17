@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useInternalAuth } from "@/hooks/useInternalAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -20,7 +20,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import { useIRPFCalculator } from "@/hooks/useIRPFCalculator";
 
 export default function Home() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useInternalAuth();
   const [, navigate] = useLocation();
 
   const {
@@ -78,9 +78,8 @@ export default function Home() {
     });
   };
 
-  const handleLogout = async () => {
-    await logout();
-    window.location.reload();
+  const handleLogout = () => {
+    logout();
   };
 
   if (showProposal) {
@@ -100,7 +99,7 @@ export default function Home() {
         onReset={resetAll}
         onOpenSettings={() => setShowSettings(true)}
         onOpenHistorico={() => navigate("/historico")}
-        userName={user?.name}
+        userName={user?.nome}
         userRole={user?.role}
         onLogout={handleLogout}
       />

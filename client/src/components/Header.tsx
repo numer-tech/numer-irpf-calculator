@@ -5,7 +5,8 @@
  * Tipografia: Sora (heading)
  */
 
-import { Calculator, RotateCcw, Settings, History, LogOut, ShieldCheck, User } from "lucide-react";
+import { Calculator, RotateCcw, Settings, History, LogOut, ShieldCheck, User, Users } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ export default function Header({
   onLogout,
 }: HeaderProps) {
   const isAdmin = userRole === "admin";
+  const [, navigate] = useLocation();
   const displayName = userName || "Usuário";
   const initials = displayName
     .split(" ")
@@ -130,6 +132,16 @@ export default function Header({
                   {isAdmin ? "Administrador" : "Usuário"}
                 </p>
               </div>
+              <DropdownMenuSeparator />
+              {isAdmin && (
+                <DropdownMenuItem
+                  onClick={() => navigate("/usuarios")}
+                  className="gap-2"
+                >
+                  <Users className="w-4 h-4" />
+                  Gerenciar Usuários
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               {onLogout && (
                 <DropdownMenuItem

@@ -1,7 +1,8 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, orcamentos, InsertOrcamento, Orcamento } from "../drizzle/schema";
+import { InsertUser, users, orcamentos, InsertOrcamento, Orcamento, internalUsers, sessions, InternalUser } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { nanoid } from "nanoid";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -17,23 +18,17 @@ export async function getDb() {
   return _db;
 }
 
+// ─── Manus OAuth Users (mantido para compatibilidade) ──────────────────────
+
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
+  if (!user.openId) throw new Error("User openId is required for upsert");
 
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
+  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
+    const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
-
     const textFields = ["name", "email", "loginMethod"] as const;
     type TextField = (typeof textFields)[number];
 
@@ -58,18 +53,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.role = 'admin';
       updateSet.role = 'admin';
     }
+    if (!values.lastSignedIn) values.lastSignedIn = new Date();
+    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
 
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
+    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -78,21 +65,123 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
+  if (!db) { console.warn("[Database] Cannot get user: database not available"); return undefined; }
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
-/** Lista todos os usuários (para admin) */
-export async function listUsers() {
+// ─── Internal Users (autenticação própria) ─────────────────────────────────
+
+export async function getInternalUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.select().from(internalUsers).where(eq(internalUsers.email, email.toLowerCase())).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getInternalUserById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.select().from(internalUsers).where(eq(internalUsers.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function createInternalUser(data: {
+  nome: string;
+  email: string;
+  passwordHash: string;
+  role?: "user" | "admin";
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(internalUsers).values({
+    nome: data.nome,
+    email: data.email.toLowerCase(),
+    passwordHash: data.passwordHash,
+    role: data.role ?? "user",
+    ativo: true,
+  });
+  return getInternalUserById(result[0].insertId);
+}
+
+export async function listInternalUsers() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select({
+    id: internalUsers.id,
+    nome: internalUsers.nome,
+    email: internalUsers.email,
+    role: internalUsers.role,
+    ativo: internalUsers.ativo,
+    createdAt: internalUsers.createdAt,
+  }).from(internalUsers).orderBy(desc(internalUsers.createdAt));
+}
+
+export async function updateInternalUser(id: number, data: Partial<{
+  nome: string;
+  email: string;
+  passwordHash: string;
+  role: "user" | "admin";
+  ativo: boolean;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(internalUsers).set(data).where(eq(internalUsers.id, id));
+  return getInternalUserById(id);
+}
+
+export async function deleteInternalUser(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(internalUsers).where(eq(internalUsers.id, id));
+  return { success: true };
+}
+
+// ─── Sessions ──────────────────────────────────────────────────────────────
+
+export async function createSession(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  const token = nanoid(64);
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+  await db.insert(sessions).values({ userId, token, expiresAt });
+  return { token, expiresAt };
+}
+
+export async function getSessionByToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const now = new Date();
+  const result = await db
+    .select({ session: sessions, user: internalUsers })
+    .from(sessions)
+    .innerJoin(internalUsers, eq(sessions.userId, internalUsers.id))
+    .where(and(eq(sessions.token, token), gt(sessions.expiresAt, now)))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function deleteSession(token: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(sessions).where(eq(sessions.token, token));
+}
+
+export async function deleteUserSessions(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+}
+
+// ─── Admin: list users (Manus OAuth, mantido para compatibilidade) ──────────
+
+export async function listUsers() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
   return db.select({
     id: users.id,
     name: users.name,
@@ -102,7 +191,7 @@ export async function listUsers() {
   }).from(users).orderBy(desc(users.createdAt));
 }
 
-// ─── Orçamentos ────────────────────────────────────────────
+// ─── Orçamentos ────────────────────────────────────────────────────────────
 
 export async function createOrcamento(data: InsertOrcamento) {
   const db = await getDb();
@@ -113,59 +202,54 @@ export async function createOrcamento(data: InsertOrcamento) {
   return getOrcamentoById(insertId);
 }
 
-/** Lista orçamentos de um usuário específico */
+/** Lista orçamentos de um usuário interno específico */
 export async function listOrcamentosByUser(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const rows = await db
-    .select({
-      orcamento: orcamentos,
-      criadorNome: users.name,
-    })
+    .select({ orcamento: orcamentos, criadorNome: internalUsers.nome })
     .from(orcamentos)
-    .leftJoin(users, eq(orcamentos.criadoPor, users.id))
+    .leftJoin(internalUsers, eq(orcamentos.criadoPor, internalUsers.id))
     .where(eq(orcamentos.criadoPor, userId))
     .orderBy(desc(orcamentos.createdAt));
 
-  return rows.map((r) => ({
-    ...r.orcamento,
-    criadorNome: r.criadorNome ?? "Desconhecido",
-  }));
+  return rows.map((r) => ({ ...r.orcamento, criadorNome: r.criadorNome ?? "Desconhecido" }));
 }
 
 /** Lista TODOS os orçamentos (admin) com nome do criador */
-export async function listAllOrcamentos() {
+export async function listAllOrcamentos(filterUserId?: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const rows = await db
-    .select({
-      orcamento: orcamentos,
-      criadorNome: users.name,
-    })
+  const query = db
+    .select({ orcamento: orcamentos, criadorNome: internalUsers.nome })
     .from(orcamentos)
-    .leftJoin(users, eq(orcamentos.criadoPor, users.id))
+    .leftJoin(internalUsers, eq(orcamentos.criadoPor, internalUsers.id))
     .orderBy(desc(orcamentos.createdAt));
 
-  return rows.map((r) => ({
-    ...r.orcamento,
-    criadorNome: r.criadorNome ?? "Desconhecido",
-  }));
+  const rows = filterUserId
+    ? await db
+        .select({ orcamento: orcamentos, criadorNome: internalUsers.nome })
+        .from(orcamentos)
+        .leftJoin(internalUsers, eq(orcamentos.criadoPor, internalUsers.id))
+        .where(eq(orcamentos.criadoPor, filterUserId))
+        .orderBy(desc(orcamentos.createdAt))
+    : await query;
+
+  return rows.map((r) => ({ ...r.orcamento, criadorNome: r.criadorNome ?? "Desconhecido" }));
 }
 
 /** Mantém listOrcamentos para compatibilidade */
 export async function listOrcamentos() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   return db.select().from(orcamentos).orderBy(desc(orcamentos.createdAt));
 }
 
 export async function getOrcamentoById(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   const result = await db.select().from(orcamentos).where(eq(orcamentos.id, id)).limit(1);
   return result.length > 0 ? result[0] : null;
 }
@@ -173,7 +257,6 @@ export async function getOrcamentoById(id: number) {
 export async function updateOrcamentoStatus(id: number, status: Orcamento["status"]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   await db.update(orcamentos).set({ status }).where(eq(orcamentos.id, id));
   return getOrcamentoById(id);
 }
@@ -181,7 +264,6 @@ export async function updateOrcamentoStatus(id: number, status: Orcamento["statu
 export async function updateOrcamentoComprovante(id: number, comprovanteUrl: string, comprovanteKey: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   await db.update(orcamentos).set({ comprovanteUrl, comprovanteKey }).where(eq(orcamentos.id, id));
   return getOrcamentoById(id);
 }
@@ -189,7 +271,6 @@ export async function updateOrcamentoComprovante(id: number, comprovanteUrl: str
 export async function updateOrcamentoObservacoes(id: number, observacoes: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   await db.update(orcamentos).set({ observacoes }).where(eq(orcamentos.id, id));
   return getOrcamentoById(id);
 }
@@ -197,7 +278,6 @@ export async function updateOrcamentoObservacoes(id: number, observacoes: string
 export async function deleteOrcamento(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   await db.delete(orcamentos).where(eq(orcamentos.id, id));
   return { success: true };
 }

@@ -1,0 +1,19 @@
+{
+  "query": "SHOW TABLES LIKE 'internal%'; SHOW TABLES LIKE 'sessions%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2c6X8ZdMLfMorTw.a9d38e417b6c --database hrYkQ7rTK4s8DYQBoB2Kee --execute SHOW TABLES LIKE 'internal%'; SHOW TABLES LIKE 'sessions%';",
+  "rows": [
+    {
+      "Tables_in_hrYkQ7rTK4s8DYQBoB2Kee (internal%)": "internalUsers"
+    },
+    {
+      "Tables_in_hrYkQ7rTK4s8DYQBoB2Kee (internal%)": "Tables_in_hrYkQ7rTK4s8DYQBoB2Kee (sessions%)"
+    },
+    {
+      "Tables_in_hrYkQ7rTK4s8DYQBoB2Kee (internal%)": "sessions"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_hrYkQ7rTK4s8DYQBoB2Kee (internal%)\ninternalUsers\nTables_in_hrYkQ7rTK4s8DYQBoB2Kee (sessions%)\nsessions\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

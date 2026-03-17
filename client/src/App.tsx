@@ -6,14 +6,15 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Historico from "./pages/Historico";
-import LoginPage from "./pages/Login";
-import { useAuth } from "./_core/hooks/useAuth";
+import Login from "./pages/Login";
+import Usuarios from "./pages/Usuarios";
+import { useInternalAuth } from "./hooks/useInternalAuth";
 import { Loader2 } from "lucide-react";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, refetch } = useInternalAuth();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center space-y-4">
@@ -25,7 +26,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return <Login onSuccess={() => refetch()} />;
   }
 
   return <>{children}</>;
@@ -37,6 +38,7 @@ function Router() {
       <Switch>
         <Route path={"/"} component={Home} />
         <Route path={"/historico"} component={Historico} />
+        <Route path={"/usuarios"} component={Usuarios} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>

@@ -1,7 +1,7 @@
-import { int, json, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { boolean, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 /**
- * Core user table backing auth flow.
+ * Core user table backing auth flow (Manus OAuth - mantida para compatibilidade).
  */
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -17,6 +17,37 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * Usuários internos da Numer Contabilidade (autenticação própria com e-mail e senha).
+ */
+export const internalUsers = mysqlTable("internalUsers", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  ativo: boolean("ativo").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InternalUser = typeof internalUsers.$inferSelect;
+export type InsertInternalUser = typeof internalUsers.$inferInsert;
+
+/**
+ * Sessões de autenticação interna.
+ */
+export const sessions = mysqlTable("sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => internalUsers.id),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
 
 /**
  * Orçamentos de IRPF - armazena cada orçamento gerado
@@ -43,8 +74,8 @@ export const orcamentos = mysqlTable("orcamentos", {
   comprovanteKey: varchar("comprovanteKey", { length: 512 }),
   /** Observações do contador */
   observacoes: text("observacoes"),
-  /** Quem criou o orçamento */
-  criadoPor: int("criadoPor").references(() => users.id),
+  /** Quem criou o orçamento (usuário interno) */
+  criadoPor: int("criadoPor").references(() => internalUsers.id),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

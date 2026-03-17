@@ -37,3 +37,17 @@
 - [x] Filtro por usuário no painel admin
 - [x] Atualizar testes vitest
 - [x] Testar e salvar checkpoint
+
+# TODO - Autenticação Própria (E-mail e Senha)
+
+- [x] Instalar bcryptjs para hash de senhas
+- [x] Criar tabela internalUsers (id, nome, email, passwordHash, role, ativo, createdAt)
+- [x] Criar tabela sessions (id, userId, token, expiresAt)
+- [x] Criar seed do usuário admin inicial (Higor)
+- [x] Implementar rotas: POST /auth/login, POST /auth/logout, GET /auth/me
+- [x] Implementar middleware de sessão próprio (cookie com token)
+- [x] Criar tela de login com e-mail e senha (identidade Numer)
+- [x] Criar painel admin: listar, criar, editar e desativar usuários
+- [x] Proteger todas as rotas com a nova autenticação
+- [x] Atualizar testes vitest
+- [x] Testar e salvar checkpoint
