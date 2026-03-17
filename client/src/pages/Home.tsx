@@ -30,6 +30,9 @@ export default function Home() {
     valorFinal,
     valorAjustado,
     pricingConfig,
+    descontosConfig,
+    descontosAtivos,
+    propostaConfig,
     setValorAjustado,
     updateChecklist,
     updateClientData,
@@ -37,6 +40,11 @@ export default function Home() {
     updateValorBase,
     resetConfig,
     resetAll,
+    toggleDesconto,
+    addDesconto,
+    updateDesconto,
+    removeDesconto,
+    updatePropostaConfig,
   } = useIRPFCalculator();
 
   const [showProposal, setShowProposal] = useState(false);
@@ -54,28 +62,54 @@ export default function Home() {
 
   const handleSalvar = () => {
     if (!clientData.nome.trim()) {
-      toast.error("Informe pelo menos o nome do cliente.");
+      toast.error("Informe o nome do cliente.");
+      return;
+    }
+    if (!clientData.cpf.trim()) {
+      toast.error("Informe o CPF do cliente.");
+      return;
+    }
+    if (!clientData.telefone.trim()) {
+      toast.error("Informe o telefone do cliente.");
       return;
     }
     createMutation.mutate({
       clienteNome: clientData.nome,
       clienteCpf: clientData.cpf || undefined,
       clienteTelefone: clientData.telefone || undefined,
-      clienteEmail: clientData.email || undefined,
       checklist: { ...checklist } as Record<string, number>,
       resultado: {
         nivelLabel: resultado.nivelLabel,
         valorBase: resultado.valorBase,
         valorItens: resultado.valorItens,
+        valorBruto: resultado.valorBruto,
+        totalDescontos: resultado.totalDescontos,
         valorTotal: resultado.valorTotal,
         totalItens: resultado.totalItens,
         totalFichas: resultado.totalFichas,
         fichasIdentificadas: resultado.fichasIdentificadas,
         lineItems: resultado.lineItems,
+        descontosAplicados: resultado.descontosAplicados.filter((d) => d.ativo),
       },
       valorCalculado: resultado.valorTotal,
       valorFinal,
     });
+  };
+
+  const handleGerarProposta = () => {
+    if (!clientData.nome.trim()) {
+      toast.error("Informe o nome do cliente para gerar a proposta.");
+      return;
+    }
+    if (!clientData.cpf.trim()) {
+      toast.error("Informe o CPF do cliente para gerar a proposta.");
+      return;
+    }
+    if (!clientData.telefone.trim()) {
+      toast.error("Informe o telefone do cliente para gerar a proposta.");
+      return;
+    }
+    setShowProposal(true);
   };
 
   const handleLogout = () => {
@@ -88,6 +122,7 @@ export default function Home() {
         clientData={clientData}
         resultado={resultado}
         valorFinal={valorFinal}
+        propostaConfig={propostaConfig}
         onBack={() => setShowProposal(false)}
       />
     );
@@ -112,6 +147,12 @@ export default function Home() {
         onUpdateItemPreco={updateItemPreco}
         onUpdateValorBase={updateValorBase}
         onResetConfig={resetConfig}
+        descontosConfig={descontosConfig}
+        onAddDesconto={addDesconto}
+        onUpdateDesconto={updateDesconto}
+        onRemoveDesconto={removeDesconto}
+        propostaConfig={propostaConfig}
+        onUpdatePropostaConfig={updatePropostaConfig}
       />
 
       {/* Hero banner sutil */}
@@ -182,9 +223,12 @@ export default function Home() {
                   valorFinal={valorFinal}
                   valorAjustado={valorAjustado}
                   onValorChange={setValorAjustado}
-                  onGerarProposta={() => setShowProposal(true)}
+                  onGerarProposta={handleGerarProposta}
                   onSalvar={handleSalvar}
                   isSaving={createMutation.isPending}
+                  descontosConfig={descontosConfig}
+                  descontosAtivos={descontosAtivos}
+                  onToggleDesconto={toggleDesconto}
                 />
               </motion.div>
 
@@ -198,7 +242,7 @@ export default function Home() {
                 <p className="text-xs text-gray-500 leading-relaxed">
                   O valor é calculado somando o <strong>valor base</strong> da declaração com o
                   preço unitário de cada item multiplicado pela quantidade informada.
-                  Use <strong>"Configurar Valores"</strong> para personalizar os preços.
+                  Use <strong>"Configurar Valores"</strong> para personalizar os preços e descontos.
                 </p>
               </motion.div>
             </div>

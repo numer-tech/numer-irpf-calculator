@@ -1,7 +1,6 @@
 /*
  * ResultPanel - Painel lateral de resultado em tempo real
- * Design: Valor base + itens detalhados + complexidade + fichas
- * Lógica: preço unitário x quantidade por item
+ * Design: Valor base + itens detalhados + descontos + complexidade + fichas
  */
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,11 +14,18 @@ import {
   Package,
   Save,
   Loader2,
+  Tag,
+  Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import type { CalculationResult, ComplexityLevel } from "@/hooks/useIRPFCalculator";
+import { Switch } from "@/components/ui/switch";
+import type {
+  CalculationResult,
+  ComplexityLevel,
+  DescontoConfig,
+} from "@/hooks/useIRPFCalculator";
 
 interface ResultPanelProps {
   resultado: CalculationResult;
@@ -29,6 +35,9 @@ interface ResultPanelProps {
   onGerarProposta: () => void;
   onSalvar?: () => void;
   isSaving?: boolean;
+  descontosConfig?: DescontoConfig[];
+  descontosAtivos?: Record<string, boolean>;
+  onToggleDesconto?: (id: string) => void;
 }
 
 const complexityColors: Record<ComplexityLevel, { bar: string; badge: string }> = {
@@ -66,6 +75,9 @@ export default function ResultPanel({
   onGerarProposta,
   onSalvar,
   isSaving,
+  descontosConfig = [],
+  descontosAtivos = {},
+  onToggleDesconto,
 }: ResultPanelProps) {
   const colors = complexityColors[resultado.nivel];
   const maxScore = 100;
@@ -76,6 +88,9 @@ export default function ResultPanel({
     const newVal = Math.max(0, valorFinal + delta);
     onValorChange(newVal);
   };
+
+  const hasDescontos = descontosConfig.length > 0;
+  const descontosAtivosCount = resultado.descontosAplicados?.filter((d) => d.ativo).length ?? 0;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -104,10 +119,16 @@ export default function ResultPanel({
             {formatCurrency(valorFinal)}
           </motion.div>
 
-          <div className="flex items-center gap-3 mt-2 text-xs text-white/70">
+          <div className="flex items-center gap-3 mt-2 text-xs text-white/70 flex-wrap">
             <span>Base: {formatCurrency(resultado.valorBase)}</span>
             <span>+</span>
             <span>Itens: {formatCurrency(resultado.valorItens)}</span>
+            {resultado.totalDescontos > 0 && (
+              <>
+                <span>-</span>
+                <span className="text-green-200">Desc: {formatCurrency(resultado.totalDescontos)}</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -162,6 +183,55 @@ export default function ResultPanel({
 
         <Separator className="bg-gray-100" />
 
+        {/* Descontos */}
+        {hasDescontos && (
+          <>
+            <div>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Tag className="w-3.5 h-3.5 text-green-500" />
+                <span className="text-xs font-medium text-gray-500">
+                  Descontos {descontosAtivosCount > 0 && `(${descontosAtivosCount} ativo${descontosAtivosCount > 1 ? "s" : ""})`}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {descontosConfig.map((desc) => {
+                  const ativo = descontosAtivos[desc.id] ?? false;
+                  const aplicado = resultado.descontosAplicados?.find((d) => d.id === desc.id);
+                  return (
+                    <div
+                      key={desc.id}
+                      className={`flex items-center justify-between py-2 px-3 rounded-lg border transition-colors ${
+                        ativo
+                          ? "bg-green-50 border-green-200"
+                          : "bg-gray-50 border-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <Percent className={`w-3 h-3 shrink-0 ${ativo ? "text-green-500" : "text-gray-400"}`} />
+                        <div className="min-w-0">
+                          <span className={`text-xs block truncate ${ativo ? "text-green-700 font-medium" : "text-gray-600"}`}>
+                            {desc.descricao}
+                          </span>
+                          <span className="text-[10px] text-gray-400">
+                            {desc.tipo === "percentual" ? `${desc.valor}%` : formatCurrency(desc.valor)}
+                            {ativo && aplicado ? ` = -${formatCurrency(aplicado.valorDesconto)}` : ""}
+                          </span>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={ativo}
+                        onCheckedChange={() => onToggleDesconto?.(desc.id)}
+                        className="data-[state=checked]:bg-green-500 shrink-0 ml-2"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <Separator className="bg-gray-100" />
+          </>
+        )}
+
         {/* Detalhamento dos itens */}
         {resultado.lineItems.length > 0 && (
           <div>
@@ -203,6 +273,23 @@ export default function ResultPanel({
                   </motion.div>
                 ))}
               </AnimatePresence>
+              {/* Descontos aplicados no detalhamento */}
+              {resultado.descontosAplicados?.filter((d) => d.ativo).map((desc) => (
+                <motion.div
+                  key={desc.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center justify-between text-xs py-1.5 px-2.5 bg-green-50 rounded-md"
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Tag className="w-3 h-3 text-green-500 shrink-0" />
+                    <span className="text-green-700 truncate">{desc.descricao}</span>
+                  </div>
+                  <span className="font-semibold text-green-700 ml-2 shrink-0">
+                    -{formatCurrency(desc.valorDesconto)}
+                  </span>
+                </motion.div>
+              ))}
               {/* Total */}
               <div className="flex items-center justify-between text-xs py-2 px-2.5 bg-orange-100/60 rounded-md border border-orange-200/50 mt-1">
                 <span className="font-semibold text-gray-700">Total calculado</span>

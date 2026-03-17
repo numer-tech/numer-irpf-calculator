@@ -1,7 +1,7 @@
 /*
  * ProposalView - Visualização e geração da proposta de orçamento
  * Design: Layout de documento profissional com identidade Numer
- * Lógica: detalhamento de itens com preço unitário x quantidade
+ * Lógica: detalhamento de itens com preço unitário x quantidade + descontos + config editável
  */
 
 import { useRef } from "react";
@@ -16,23 +16,32 @@ import {
   Calendar,
   User,
   Phone,
-  Mail,
   Package,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import type { ClientData, CalculationResult } from "@/hooks/useIRPFCalculator";
+import type { ClientData, CalculationResult, PropostaConfig } from "@/hooks/useIRPFCalculator";
 
 const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 const PROPOSAL_HEADER_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/proposal-header-54h6qUingoWxgiHNzuFjAU.webp";
 
-interface ProposalViewProps {
+export interface ProposalViewProps {
   clientData: ClientData;
   resultado: CalculationResult;
   valorFinal: number;
+  propostaConfig?: PropostaConfig;
   onBack: () => void;
 }
+
+const defaultPropostaForView: PropostaConfig = {
+  formasPagamento: "PIX, Transferência Bancária ou Boleto",
+  prazoValidade: "15 dias",
+  condicoesGerais:
+    "O valor poderá ser ajustado caso sejam identificadas informações adicionais durante a elaboração da declaração. O prazo de entrega é de até 5 dias úteis após o recebimento de toda a documentação.",
+  observacoes: "",
+};
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -53,7 +62,8 @@ function formatDate(): string {
 function generateProposalText(
   clientData: ClientData,
   resultado: CalculationResult,
-  valorFinal: number
+  valorFinal: number,
+  propConfig: PropostaConfig
 ): string {
   const lines = [
     `═══════════════════════════════`,
@@ -67,7 +77,6 @@ function generateProposalText(
     clientData.nome ? `Nome: ${clientData.nome}` : "",
     clientData.cpf ? `CPF: ${clientData.cpf}` : "",
     clientData.telefone ? `Telefone: ${clientData.telefone}` : "",
-    clientData.email ? `E-mail: ${clientData.email}` : "",
     ``,
     `━━━ DETALHAMENTO DO ORÇAMENTO ━━━`,
     `Valor base da declaração: ${formatCurrency(resultado.valorBase)}`,
@@ -77,6 +86,20 @@ function generateProposalText(
         `  ${item.label}: ${item.quantidade}x ${formatCurrency(item.precoUnitario)} = ${formatCurrency(item.subtotal)}`
     ),
     ``,
+  ];
+
+  // Descontos
+  const descontosAtivos = resultado.descontosAplicados?.filter((d) => d.ativo) ?? [];
+  if (descontosAtivos.length > 0) {
+    lines.push(`━━━ DESCONTOS ━━━`);
+    for (const d of descontosAtivos) {
+      const tipoStr = d.tipo === "percentual" ? `${d.valor}%` : formatCurrency(d.valor);
+      lines.push(`  ${d.descricao} (${tipoStr}): -${formatCurrency(d.valorDesconto)}`);
+    }
+    lines.push(``);
+  }
+
+  lines.push(
     `Complexidade: ${resultado.nivelLabel}`,
     `Total de itens: ${resultado.totalItens}`,
     ``,
@@ -95,24 +118,25 @@ function generateProposalText(
     `  • Suporte em caso de malha fina`,
     ``,
     `━━━ CONDIÇÕES ━━━`,
-    `• Pagamento: à vista ou em até 2x`,
-    `• Prazo de entrega: até 5 dias úteis após recebimento de toda documentação`,
-    `• Validade desta proposta: 15 dias`,
+    `• Formas de pagamento: ${propConfig.formasPagamento}`,
+    `• Validade desta proposta: ${propConfig.prazoValidade}`,
+    propConfig.condicoesGerais ? `• ${propConfig.condicoesGerais}` : "",
+    propConfig.observacoes ? `\nObservações: ${propConfig.observacoes}` : "",
     ``,
     `═══════════════════════════════`,
     `   Higor Araujo - Contador`,
     `   Numer Contabilidade`,
-    `   CRC: Ativo`,
     `═══════════════════════════════`,
-  ];
+  );
 
-  return lines.filter((l) => l !== undefined).join("\n");
+  return lines.filter((l) => l !== undefined && l !== "").join("\n");
 }
 
 function generateWhatsAppText(
   clientData: ClientData,
   resultado: CalculationResult,
-  valorFinal: number
+  valorFinal: number,
+  propConfig: PropostaConfig
 ): string {
   const lines = [
     `*NUMER CONTABILIDADE*`,
@@ -131,6 +155,20 @@ function generateWhatsAppText(
         `  • ${item.label}: ${item.quantidade}x ${formatCurrency(item.precoUnitario)} = *${formatCurrency(item.subtotal)}*`
     ),
     ``,
+  ];
+
+  // Descontos
+  const descontosAtivos = resultado.descontosAplicados?.filter((d) => d.ativo) ?? [];
+  if (descontosAtivos.length > 0) {
+    lines.push(`🏷️ *Descontos:*`);
+    for (const d of descontosAtivos) {
+      const tipoStr = d.tipo === "percentual" ? `${d.valor}%` : formatCurrency(d.valor);
+      lines.push(`  • ${d.descricao} (${tipoStr}): *-${formatCurrency(d.valorDesconto)}*`);
+    }
+    lines.push(``);
+  }
+
+  lines.push(
     `Complexidade: *${resultado.nivelLabel}*`,
     ``,
     `📋 *Fichas a preencher:*`,
@@ -145,34 +183,37 @@ function generateWhatsAppText(
     `• Acompanhamento do processamento`,
     `• Suporte em caso de malha fina`,
     ``,
-    `📌 Pagamento: à vista ou em até 2x`,
-    `📌 Prazo: até 5 dias úteis`,
-    `📌 Validade: 15 dias`,
+    `📌 Pagamento: ${propConfig.formasPagamento}`,
+    `📌 Validade: ${propConfig.prazoValidade}`,
+    propConfig.condicoesGerais ? `📌 ${propConfig.condicoesGerais}` : "",
+    propConfig.observacoes ? `\n📝 _${propConfig.observacoes}_` : "",
     ``,
     `_Higor Araujo - Contador_`,
     `_Numer Contabilidade_`,
-  ];
+  );
 
-  return lines.filter((l) => l !== undefined).join("\n");
+  return lines.filter((l) => l !== undefined && l !== "").join("\n");
 }
 
 export default function ProposalView({
   clientData,
   resultado,
   valorFinal,
+  propostaConfig,
   onBack,
 }: ProposalViewProps) {
   const proposalRef = useRef<HTMLDivElement>(null);
+  const propConfig = propostaConfig ?? defaultPropostaForView;
 
   const handleCopy = () => {
-    const text = generateProposalText(clientData, resultado, valorFinal);
+    const text = generateProposalText(clientData, resultado, valorFinal, propConfig);
     navigator.clipboard.writeText(text).then(() => {
       toast.success("Proposta copiada para a área de transferência!");
     });
   };
 
   const handleWhatsApp = () => {
-    const text = generateWhatsAppText(clientData, resultado, valorFinal);
+    const text = generateWhatsAppText(clientData, resultado, valorFinal, propConfig);
     const phone = clientData.telefone.replace(/\D/g, "");
     const url = phone
       ? `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`
@@ -183,6 +224,8 @@ export default function ProposalView({
   const handlePrint = () => {
     window.print();
   };
+
+  const descontosAtivos = resultado.descontosAplicados?.filter((d) => d.ativo) ?? [];
 
   return (
     <motion.div
@@ -201,7 +244,7 @@ export default function ProposalView({
             className="text-gray-600 hover:text-orange-600 gap-1.5"
           >
             <ArrowLeft className="w-4 h-4" />
-            Voltar ao Orçamento
+            Voltar
           </Button>
 
           <div className="flex items-center gap-2">
@@ -297,12 +340,6 @@ export default function ProposalView({
                       <span className="text-gray-600">{clientData.telefone}</span>
                     </div>
                   )}
-                  {clientData.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-gray-600">{clientData.email}</span>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -353,6 +390,39 @@ export default function ProposalView({
                     </div>
                     <div className="col-span-3 text-right text-sm font-medium text-orange-700">
                       {formatCurrency(item.subtotal)}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Subtotal bruto */}
+                {descontosAtivos.length > 0 && (
+                  <div className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center bg-gray-50 border-t border-gray-200">
+                    <div className="col-span-9">
+                      <span className="text-sm font-semibold text-gray-700">Subtotal</span>
+                    </div>
+                    <div className="col-span-3 text-right text-sm font-semibold text-gray-700">
+                      {formatCurrency(resultado.valorBruto)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Descontos */}
+                {descontosAtivos.map((desc) => (
+                  <div
+                    key={desc.id}
+                    className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center bg-green-50/50 border-t border-green-100"
+                  >
+                    <div className="col-span-9 flex items-center gap-2">
+                      <Tag className="w-3.5 h-3.5 text-green-500" />
+                      <span className="text-sm text-green-700">
+                        {desc.descricao}
+                        <span className="text-xs text-green-500 ml-1">
+                          ({desc.tipo === "percentual" ? `${desc.valor}%` : formatCurrency(desc.valor)})
+                        </span>
+                      </span>
+                    </div>
+                    <div className="col-span-3 text-right text-sm font-medium text-green-700">
+                      -{formatCurrency(desc.valorDesconto)}
                     </div>
                   </div>
                 ))}
@@ -410,6 +480,11 @@ export default function ProposalView({
                   (valor ajustado — calculado: {formatCurrency(resultado.valorTotal)})
                 </p>
               )}
+              {descontosAtivos.length > 0 && (
+                <p className="text-xs text-white/70 mt-1">
+                  Inclui {descontosAtivos.length} desconto{descontosAtivos.length > 1 ? "s" : ""} aplicado{descontosAtivos.length > 1 ? "s" : ""}
+                </p>
+              )}
             </div>
 
             {/* Inclui */}
@@ -440,10 +515,18 @@ export default function ProposalView({
                 Condições
               </h3>
               <ul className="space-y-1.5 text-sm text-gray-600">
-                <li>• Pagamento: à vista ou em até 2x</li>
-                <li>• Prazo de entrega: até 5 dias úteis após recebimento de toda documentação</li>
-                <li>• Validade desta proposta: 15 dias</li>
+                <li>• Formas de pagamento: {propConfig.formasPagamento}</li>
+                <li>• Validade desta proposta: {propConfig.prazoValidade}</li>
+                {propConfig.condicoesGerais && (
+                  <li>• {propConfig.condicoesGerais}</li>
+                )}
               </ul>
+              {propConfig.observacoes && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Observações:</p>
+                  <p className="text-sm text-gray-600 whitespace-pre-line">{propConfig.observacoes}</p>
+                </div>
+              )}
             </div>
 
             <Separator />

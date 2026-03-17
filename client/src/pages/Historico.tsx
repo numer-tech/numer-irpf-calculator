@@ -119,7 +119,6 @@ function buildProposalData(orc: any): {
     nome: orc.clienteNome || "",
     cpf: orc.clienteCpf || "",
     telefone: orc.clienteTelefone || "",
-    email: orc.clienteEmail || "",
   };
 
   const savedResultado = orc.resultado as any;
@@ -129,11 +128,14 @@ function buildProposalData(orc: any): {
     nivelLabel: savedResultado?.nivelLabel || "Simples",
     valorBase: savedResultado?.valorBase || 0,
     valorItens: savedResultado?.valorItens || 0,
+    valorBruto: savedResultado?.valorBruto || (savedResultado?.valorBase || 0) + (savedResultado?.valorItens || 0),
+    totalDescontos: savedResultado?.totalDescontos || 0,
     valorTotal: savedResultado?.valorTotal || 0,
     totalItens: savedResultado?.totalItens || 0,
     totalFichas: savedResultado?.totalFichas || 0,
     lineItems: savedResultado?.lineItems || [],
     fichasIdentificadas: savedResultado?.fichasIdentificadas || [],
+    descontosAplicados: savedResultado?.descontosAplicados || [],
   };
 
   const valorFinal =

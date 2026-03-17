@@ -67,3 +67,17 @@
 - [x] Adicionar botão "Visualizar" e "Gerar Proposta" na listagem do histórico
 - [x] Reconstruir dados do orçamento salvo para exibir no ProposalView
 - [x] Testar e salvar checkpoint
+
+# TODO - Campos Obrigatórios, Descontos e Proposta Editável
+
+- [x] Tornar nome, CPF e telefone obrigatórios no formulário
+- [x] Remover campo de e-mail do formulário e da interface
+- [x] Criar sistema de descontos configuráveis (ativar/desativar, descrição editável, múltiplos)
+- [x] Adicionar descontos ao cálculo do valor final
+- [x] Exibir descontos no painel de resultado em tempo real
+- [x] Adicionar aba de Descontos nas configurações
+- [x] Criar configurações editáveis da proposta (formas de pagamento, prazo, condições)
+- [x] Adicionar aba de Proposta nas configurações
+- [x] Atualizar ProposalView para usar as configurações de proposta e descontos
+- [x] Atualizar schema/rotas do banco para salvar descontos junto ao orçamento
+- [x] Testar e salvar checkpoint

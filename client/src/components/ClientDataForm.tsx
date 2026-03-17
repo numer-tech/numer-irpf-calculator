@@ -1,9 +1,10 @@
 /*
  * ClientDataForm - Formulário de dados do cliente
- * Design: Cards com borda sutil, inputs limpos
+ * Campos obrigatórios: Nome, CPF, Telefone
+ * Sem campo de e-mail
  */
 
-import { User, Mail, Phone, FileText } from "lucide-react";
+import { User, Phone, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ClientData } from "@/hooks/useIRPFCalculator";
@@ -39,6 +40,7 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
           <h2 className="text-sm font-semibold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
             Dados do Cliente
           </h2>
+          <span className="text-[10px] text-gray-400 ml-auto">* Campos obrigatórios</span>
         </div>
       </div>
 
@@ -47,7 +49,7 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
           <div className="sm:col-span-2">
             <Label htmlFor="nome" className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
               <User className="w-3 h-3" />
-              Nome Completo
+              Nome Completo <span className="text-red-400">*</span>
             </Label>
             <Input
               id="nome"
@@ -55,13 +57,14 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
               value={data.nome}
               onChange={(e) => onChange("nome", e.target.value)}
               className="h-9 text-sm bg-gray-50/50 border-gray-200 focus:border-orange-300 focus:ring-orange-200"
+              required
             />
           </div>
 
           <div>
             <Label htmlFor="cpf" className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
               <FileText className="w-3 h-3" />
-              CPF
+              CPF <span className="text-red-400">*</span>
             </Label>
             <Input
               id="cpf"
@@ -69,13 +72,14 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
               value={data.cpf}
               onChange={(e) => onChange("cpf", formatCPF(e.target.value))}
               className="h-9 text-sm bg-gray-50/50 border-gray-200 focus:border-orange-300 focus:ring-orange-200"
+              required
             />
           </div>
 
           <div>
             <Label htmlFor="telefone" className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
               <Phone className="w-3 h-3" />
-              Telefone / WhatsApp
+              Telefone / WhatsApp <span className="text-red-400">*</span>
             </Label>
             <Input
               id="telefone"
@@ -83,21 +87,7 @@ export default function ClientDataForm({ data, onChange }: ClientDataFormProps) 
               value={data.telefone}
               onChange={(e) => onChange("telefone", formatPhone(e.target.value))}
               className="h-9 text-sm bg-gray-50/50 border-gray-200 focus:border-orange-300 focus:ring-orange-200"
-            />
-          </div>
-
-          <div className="sm:col-span-2">
-            <Label htmlFor="email" className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
-              <Mail className="w-3 h-3" />
-              E-mail
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="email@exemplo.com"
-              value={data.email}
-              onChange={(e) => onChange("email", e.target.value)}
-              className="h-9 text-sm bg-gray-50/50 border-gray-200 focus:border-orange-300 focus:ring-orange-200"
+              required
             />
           </div>
         </div>

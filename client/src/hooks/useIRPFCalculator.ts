@@ -1,59 +1,28 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 
-// ─── Tipos de dados do cliente ───
+// ─── Tipos de dados do cliente (sem e-mail) ───
 export interface ClientData {
   nome: string;
   cpf: string;
   telefone: string;
-  email: string;
 }
 
 // ─── Estado do checklist: fichas oficiais do IRPF ───
-// Cada campo representa a quantidade de itens/informes em cada ficha oficial
 export interface ChecklistState {
-  // Ficha 1: Dependentes
   dependentes: number;
-
-  // Ficha 2: Alimentandos
   alimentandos: number;
-
-  // Ficha 3: Rend. Trib. Receb. de Pessoa Jurídica
   rendTribPJ: number;
-
-  // Ficha 4: Rend. Trib. Recebidos de PF/Exterior (Carnê-Leão)
   rendTribPFExterior: number;
-
-  // Ficha 5: Rendimentos Isentos e Não Tributáveis
   rendimentosIsentos: number;
-
-  // Ficha 6: Rendimentos Sujeitos à Tributação Exclusiva/Definitiva
   rendTributacaoExclusiva: number;
-
-  // Ficha 7: Rendimentos Tributáveis de PJ (Imposto com Exigibilidade Suspensa)
   rendExigibilidadeSuspensa: number;
-
-  // Ficha 8: Rendimentos Recebidos Acumuladamente (RRA)
   rendRecebidosAcumuladamente: number;
-
-  // Ficha 9: Imposto Pago/Retido
   impostoPagoRetido: number;
-
-  // Ficha 10: Pagamentos Efetuados (médicos, educação, pensão, etc.)
   pagamentosEfetuados: number;
-
-  // Ficha 11: Doações Efetuadas
   doacoesEfetuadas: number;
-
-  // Ficha 12: Bens e Direitos (imóveis, veículos, contas, aplicações, criptos, etc.)
   bensEDireitos: number;
-
-  // Ficha 13: Dívidas e Ônus Reais
   dividasOnus: number;
-
-  // Ficha 14: Espólio
   espolio: number;
-
-  // Ficha 15: Doações a Partidos Políticos e Candidatos
   doacoesPartidos: number;
 }
 
@@ -72,6 +41,31 @@ export interface PricingConfig {
   itensPreco: ItemPrecoConfig[];
 }
 
+// ─── Descontos configuráveis ───
+export interface DescontoConfig {
+  id: string;
+  descricao: string;
+  tipo: "percentual" | "fixo";
+  valor: number; // percentual (0-100) ou valor fixo em R$
+}
+
+export interface DescontoAplicado {
+  id: string;
+  descricao: string;
+  tipo: "percentual" | "fixo";
+  valor: number;
+  valorDesconto: number; // valor calculado do desconto
+  ativo: boolean;
+}
+
+// ─── Configurações da proposta ───
+export interface PropostaConfig {
+  formasPagamento: string;
+  prazoValidade: string;
+  condicoesGerais: string;
+  observacoes: string;
+}
+
 export type ComplexityLevel = "simples" | "medio" | "complexo" | "muito_complexo";
 
 export interface LineItem {
@@ -87,11 +81,14 @@ export interface CalculationResult {
   nivelLabel: string;
   valorBase: number;
   valorItens: number;
+  valorBruto: number;
+  totalDescontos: number;
   valorTotal: number;
   totalItens: number;
   totalFichas: number;
   lineItems: LineItem[];
   fichasIdentificadas: string[];
+  descontosAplicados: DescontoAplicado[];
 }
 
 // ─── Grupos de fichas (ordem de exibição) ───
@@ -103,11 +100,10 @@ export const GRUPOS_FICHAS = [
   "Bens, Dívidas e Situações Especiais",
 ] as const;
 
-export type GrupoFicha = typeof GRUPOS_FICHAS[number];
+export type GrupoFicha = (typeof GRUPOS_FICHAS)[number];
 
 // ─── Configuração padrão de preços unitários (fichas oficiais IRPF) ───
 export const defaultItensPreco: ItemPrecoConfig[] = [
-  // ── Rendimentos Tributáveis ──
   {
     key: "rendTribPJ",
     label: "Rend. Trib. Receb. de PJ",
@@ -140,7 +136,6 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     descricaoUnidade: "por processo",
     grupo: "Rendimentos Tributáveis",
   },
-  // ── Rendimentos Isentos e Especiais ──
   {
     key: "rendimentosIsentos",
     label: "Rendimentos Isentos e Não Tributáveis",
@@ -157,7 +152,6 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     descricaoUnidade: "por informe",
     grupo: "Rendimentos Isentos e Especiais",
   },
-  // ── Imposto e Pagamentos ──
   {
     key: "impostoPagoRetido",
     label: "Imposto Pago/Retido",
@@ -190,7 +184,6 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     descricaoUnidade: "por doação",
     grupo: "Imposto e Pagamentos",
   },
-  // ── Dependentes e Alimentandos ──
   {
     key: "dependentes",
     label: "Dependentes",
@@ -207,7 +200,6 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     descricaoUnidade: "por alimentando",
     grupo: "Dependentes e Alimentandos",
   },
-  // ── Bens, Dívidas e Situações Especiais ──
   {
     key: "bensEDireitos",
     label: "Bens e Direitos",
@@ -236,7 +228,28 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
 
 export const DEFAULT_VALOR_BASE = 150;
 
-const STORAGE_KEY = "numer-irpf-pricing-config-v3";
+// ─── Descontos padrão ───
+export const defaultDescontos: DescontoConfig[] = [
+  {
+    id: "desc-cliente-recorrente",
+    descricao: "Desconto cliente recorrente",
+    tipo: "percentual",
+    valor: 10,
+  },
+];
+
+// ─── Configurações padrão da proposta ───
+export const defaultPropostaConfig: PropostaConfig = {
+  formasPagamento: "PIX, Transferência Bancária ou Boleto",
+  prazoValidade: "15 dias",
+  condicoesGerais:
+    "O valor poderá ser ajustado caso sejam identificadas informações adicionais durante a elaboração da declaração. O prazo de entrega é de até 5 dias úteis após o recebimento de toda a documentação.",
+  observacoes: "",
+};
+
+const STORAGE_KEY = "numer-irpf-pricing-config-v4";
+const DESCONTOS_KEY = "numer-irpf-descontos-v1";
+const PROPOSTA_KEY = "numer-irpf-proposta-config-v1";
 
 function loadConfig(): PricingConfig {
   try {
@@ -265,6 +278,34 @@ function saveConfig(config: PricingConfig) {
   } catch {}
 }
 
+function loadDescontos(): DescontoConfig[] {
+  try {
+    const stored = localStorage.getItem(DESCONTOS_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return defaultDescontos.map((d) => ({ ...d }));
+}
+
+function saveDescontos(descontos: DescontoConfig[]) {
+  try {
+    localStorage.setItem(DESCONTOS_KEY, JSON.stringify(descontos));
+  } catch {}
+}
+
+function loadPropostaConfig(): PropostaConfig {
+  try {
+    const stored = localStorage.getItem(PROPOSTA_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return { ...defaultPropostaConfig };
+}
+
+function savePropostaConfig(config: PropostaConfig) {
+  try {
+    localStorage.setItem(PROPOSTA_KEY, JSON.stringify(config));
+  } catch {}
+}
+
 const initialChecklist: ChecklistState = {
   dependentes: 0,
   alimentandos: 0,
@@ -287,12 +328,10 @@ const initialClientData: ClientData = {
   nome: "",
   cpf: "",
   telefone: "",
-  email: "",
 };
 
 function identificarFichas(checklist: ChecklistState): string[] {
   const fichas: string[] = [];
-
   if (checklist.dependentes > 0) fichas.push("Dependentes");
   if (checklist.alimentandos > 0) fichas.push("Alimentandos");
   if (checklist.rendTribPJ > 0) fichas.push("Rend. Trib. Receb. de Pessoa Jurídica");
@@ -308,7 +347,6 @@ function identificarFichas(checklist: ChecklistState): string[] {
   if (checklist.dividasOnus > 0) fichas.push("Dívidas e Ônus Reais");
   if (checklist.espolio > 0) fichas.push("Espólio");
   if (checklist.doacoesPartidos > 0) fichas.push("Doações a Partidos Políticos e Candidatos");
-
   return fichas;
 }
 
@@ -325,10 +363,21 @@ export function useIRPFCalculator() {
   const [checklist, setChecklist] = useState<ChecklistState>(initialChecklist);
   const [valorAjustado, setValorAjustado] = useState<number | null>(null);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig>(loadConfig);
+  const [descontosConfig, setDescontosConfig] = useState<DescontoConfig[]>(loadDescontos);
+  const [descontosAtivos, setDescontosAtivos] = useState<Record<string, boolean>>({});
+  const [propostaConfig, setPropostaConfig] = useState<PropostaConfig>(loadPropostaConfig);
 
   useEffect(() => {
     saveConfig(pricingConfig);
   }, [pricingConfig]);
+
+  useEffect(() => {
+    saveDescontos(descontosConfig);
+  }, [descontosConfig]);
+
+  useEffect(() => {
+    savePropostaConfig(propostaConfig);
+  }, [propostaConfig]);
 
   const resultado = useMemo<CalculationResult>(() => {
     const lineItems: LineItem[] = [];
@@ -353,20 +402,47 @@ export function useIRPFCalculator() {
 
     const fichas = identificarFichas(checklist);
     const { nivel, label } = determinarNivel(totalItens, fichas.length);
-    const valorTotal = pricingConfig.valorBase + valorItens;
+    const valorBruto = pricingConfig.valorBase + valorItens;
+
+    // Calcular descontos
+    const descontosAplicados: DescontoAplicado[] = [];
+    let totalDescontos = 0;
+
+    for (const desc of descontosConfig) {
+      const ativo = descontosAtivos[desc.id] ?? false;
+      let valorDesconto = 0;
+      if (ativo) {
+        if (desc.tipo === "percentual") {
+          valorDesconto = Math.round((valorBruto * desc.valor) / 100 * 100) / 100;
+        } else {
+          valorDesconto = desc.valor;
+        }
+        totalDescontos += valorDesconto;
+      }
+      descontosAplicados.push({
+        ...desc,
+        valorDesconto,
+        ativo,
+      });
+    }
+
+    const valorTotal = Math.max(0, valorBruto - totalDescontos);
 
     return {
       nivel,
       nivelLabel: label,
       valorBase: pricingConfig.valorBase,
       valorItens,
+      valorBruto,
+      totalDescontos,
       valorTotal,
       totalItens,
       totalFichas: fichas.length,
       lineItems,
       fichasIdentificadas: fichas,
+      descontosAplicados,
     };
-  }, [checklist, pricingConfig]);
+  }, [checklist, pricingConfig, descontosConfig, descontosAtivos]);
 
   const valorFinal = valorAjustado ?? resultado.valorTotal;
 
@@ -405,6 +481,8 @@ export function useIRPFCalculator() {
       valorBase: DEFAULT_VALOR_BASE,
       itensPreco: defaultItensPreco.map((i) => ({ ...i })),
     });
+    setDescontosConfig(defaultDescontos.map((d) => ({ ...d })));
+    setPropostaConfig({ ...defaultPropostaConfig });
     setValorAjustado(null);
   }, []);
 
@@ -412,6 +490,48 @@ export function useIRPFCalculator() {
     setChecklist(initialChecklist);
     setClientData(initialClientData);
     setValorAjustado(null);
+    setDescontosAtivos({});
+  }, []);
+
+  // ─── Funções de descontos ───
+  const toggleDesconto = useCallback((id: string) => {
+    setDescontosAtivos((prev) => ({ ...prev, [id]: !prev[id] }));
+    setValorAjustado(null);
+  }, []);
+
+  const addDesconto = useCallback(() => {
+    const novoDesconto: DescontoConfig = {
+      id: `desc_${Date.now()}`,
+      descricao: "Novo desconto",
+      tipo: "percentual",
+      valor: 10,
+    };
+    setDescontosConfig((prev) => [...prev, novoDesconto]);
+  }, []);
+
+  const updateDesconto = useCallback((id: string, updates: Partial<DescontoConfig>) => {
+    setDescontosConfig((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, ...updates } : d))
+    );
+    setValorAjustado(null);
+  }, []);
+
+  const removeDesconto = useCallback((id: string) => {
+    setDescontosConfig((prev) => prev.filter((d) => d.id !== id));
+    setDescontosAtivos((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setValorAjustado(null);
+  }, []);
+
+  // ─── Funções de configuração da proposta ───
+  const updatePropostaConfig = useCallback(<K extends keyof PropostaConfig>(
+    key: K,
+    value: PropostaConfig[K]
+  ) => {
+    setPropostaConfig((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   return {
@@ -421,6 +541,9 @@ export function useIRPFCalculator() {
     valorFinal,
     valorAjustado,
     pricingConfig,
+    descontosConfig,
+    descontosAtivos,
+    propostaConfig,
     setValorAjustado,
     updateChecklist,
     updateClientData,
@@ -428,5 +551,10 @@ export function useIRPFCalculator() {
     updateValorBase,
     resetConfig,
     resetAll,
+    toggleDesconto,
+    addDesconto,
+    updateDesconto,
+    removeDesconto,
+    updatePropostaConfig,
   };
 }
