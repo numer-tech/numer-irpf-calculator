@@ -225,11 +225,37 @@ export const appRouter = router({
         corPrimaria: z.string().optional(),
         corSecundaria: z.string().optional(),
         corTextoPrimaria: z.string().optional(),
+        // Dados do usuário admin master da empresa
+        adminNome: z.string().min(2).optional(),
+        adminEmail: z.string().email().optional(),
+        adminSenha: z.string().min(6).optional(),
       }))
       .mutation(async ({ input }) => {
         // Normalizar email vazio para undefined
         if (input.email === "") input.email = undefined;
-        return createEmpresa(input);
+        const { adminNome, adminEmail, adminSenha, ...empresaData } = input;
+        const empresa = await createEmpresa(empresaData);
+
+        // Se dados do admin foram fornecidos, criar o usuário admin vinculado
+        if (adminNome && adminEmail && adminSenha && empresa) {
+          const existingUser = await getInternalUserByEmail(adminEmail);
+          if (existingUser) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `Já existe um usuário com o e-mail ${adminEmail}`,
+            });
+          }
+          const passwordHash = await bcrypt.hash(adminSenha, 10);
+          await createInternalUser({
+            nome: adminNome,
+            email: adminEmail,
+            passwordHash,
+            role: "admin",
+            empresaId: empresa.id,
+          });
+        }
+
+        return empresa;
       }),
 
     /** Atualizar empresa (superadmin ou admin da empresa) */

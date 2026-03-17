@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useInternalAuth } from "@/hooks/useInternalAuth";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Plus, Pencil, Trash2, ArrowLeft, Upload, Palette,
-  Phone, Mail, Globe, MapPin, User, FileText, X, Check, Eye
+  Phone, Mail, Globe, MapPin, User, FileText, X, Eye, KeyRound
 } from "lucide-react";
 
 export default function Empresas() {
@@ -18,7 +18,10 @@ export default function Empresas() {
     telefone: "", whatsapp: "", endereco: "", site: "",
     corPrimaria: "#F97316", corSecundaria: "#FB923C", corTextoPrimaria: "#FFFFFF",
   });
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [adminForm, setAdminForm] = useState({
+    adminNome: "", adminEmail: "", adminSenha: "",
+  });
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   const empresasQuery = trpc.empresa.list.useQuery(undefined, { enabled: isSuperAdmin });
   const createMutation = trpc.empresa.create.useMutation({
@@ -54,6 +57,8 @@ export default function Empresas() {
       telefone: "", whatsapp: "", endereco: "", site: "",
       corPrimaria: "#F97316", corSecundaria: "#FB923C", corTextoPrimaria: "#FFFFFF",
     });
+    setAdminForm({ adminNome: "", adminEmail: "", adminSenha: "" });
+    setShowAdminPassword(false);
     setEditingId(null);
     setShowForm(false);
   }
@@ -73,6 +78,7 @@ export default function Empresas() {
       corSecundaria: empresa.corSecundaria ?? "#FB923C",
       corTextoPrimaria: empresa.corTextoPrimaria ?? "#FFFFFF",
     });
+    setAdminForm({ adminNome: "", adminEmail: "", adminSenha: "" });
     setEditingId(empresa.id);
     setShowForm(true);
   }
@@ -82,7 +88,14 @@ export default function Empresas() {
     if (editingId) {
       updateMutation.mutate({ id: editingId, ...form });
     } else {
-      createMutation.mutate(form);
+      // Ao criar, incluir dados do admin se preenchidos
+      const payload: any = { ...form };
+      if (adminForm.adminNome && adminForm.adminEmail && adminForm.adminSenha) {
+        payload.adminNome = adminForm.adminNome;
+        payload.adminEmail = adminForm.adminEmail;
+        payload.adminSenha = adminForm.adminSenha;
+      }
+      createMutation.mutate(payload);
     }
   }
 
@@ -101,6 +114,7 @@ export default function Empresas() {
   }
 
   const empresas = empresasQuery.data ?? [];
+  const isCreating = !editingId;
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -146,6 +160,7 @@ export default function Empresas() {
                 </button>
               </div>
 
+              {/* Dados da Empresa */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Nome da Empresa *</label>
@@ -184,7 +199,7 @@ export default function Empresas() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">E-mail</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">E-mail da Empresa</label>
                   <input
                     type="email" value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -296,6 +311,87 @@ export default function Empresas() {
                 </div>
               </div>
 
+              {/* Seção: Usuário Admin Master (apenas na criação) */}
+              {isCreating && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4" /> Usuário Administrador (Master)
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Defina o usuário que será o administrador desta empresa. Ele poderá gerenciar usuários, configurações e orçamentos.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Nome do Admin *</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text" value={adminForm.adminNome}
+                          onChange={(e) => setAdminForm({ ...adminForm, adminNome: e.target.value })}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                          placeholder="Nome completo"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">E-mail do Admin *</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="email" value={adminForm.adminEmail}
+                          onChange={(e) => setAdminForm({ ...adminForm, adminEmail: e.target.value })}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                          placeholder="admin@empresa.com.br"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Senha do Admin *</label>
+                      <div className="relative">
+                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type={showAdminPassword ? "text" : "password"}
+                          value={adminForm.adminSenha}
+                          onChange={(e) => setAdminForm({ ...adminForm, adminSenha: e.target.value })}
+                          className="w-full pl-9 pr-10 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                          placeholder="Mínimo 6 caracteres"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {adminForm.adminNome && adminForm.adminEmail && adminForm.adminSenha && adminForm.adminSenha.length >= 6 && (
+                    <div className="mt-2 p-2 bg-green-50 rounded-lg">
+                      <p className="text-xs text-green-700">
+                        O usuário <strong>{adminForm.adminNome}</strong> ({adminForm.adminEmail}) será criado como administrador desta empresa.
+                      </p>
+                    </div>
+                  )}
+                  {adminForm.adminSenha && adminForm.adminSenha.length > 0 && adminForm.adminSenha.length < 6 && (
+                    <div className="mt-2 p-2 bg-amber-50 rounded-lg">
+                      <p className="text-xs text-amber-700">
+                        A senha deve ter no mínimo 6 caracteres.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Erro da mutation */}
+              {(createMutation.error || updateMutation.error) && (
+                <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                  <p className="text-xs text-red-700">
+                    {createMutation.error?.message || updateMutation.error?.message}
+                  </p>
+                </div>
+              )}
+
               <div className="mt-4 flex justify-end gap-2">
                 <button onClick={resetForm} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   Cancelar
@@ -306,7 +402,7 @@ export default function Empresas() {
                   className="px-6 py-2 text-sm text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                   style={{ backgroundColor: "var(--empresa-primary, #F97316)" }}
                 >
-                  {editingId ? "Salvar Alterações" : "Criar Empresa"}
+                  {createMutation.isPending || updateMutation.isPending ? "Salvando..." : editingId ? "Salvar Alterações" : "Criar Empresa"}
                 </button>
               </div>
             </motion.div>

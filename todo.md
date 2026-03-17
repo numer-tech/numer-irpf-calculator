@@ -102,3 +102,10 @@
 - [x] Corrigir validação Zod do campo email na rota empresa.update (aceitar string vazia ou null)
 - [x] Corrigir validação Zod do campo email na rota empresa.create
 - [x] Testar e salvar checkpoint
+
+# TODO - Cadastro de Usuário Master ao Criar Empresa
+
+- [x] Adicionar campos de usuário admin (nome, email, senha) no formulário de criação de empresa
+- [x] Criar rota backend que cria empresa + usuário admin vinculado em uma transação
+- [x] Atualizar página Empresas.tsx com os novos campos
+- [x] Testar e salvar checkpoint
