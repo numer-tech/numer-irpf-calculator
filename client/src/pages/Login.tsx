@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, Mail, Eye, EyeOff, Calculator, Shield, Building2 } from "lucide-react";
+import { Loader2, Lock, Mail, Eye, EyeOff, Calculator, Shield, Building2, ChevronDown } from "lucide-react";
 
 const DEFAULT_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
@@ -18,10 +18,28 @@ export default function Login({ onSuccess }: LoginProps) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [showSenha, setShowSenha] = useState(false);
+  const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
   const utils = trpc.useUtils();
 
-  // Buscar branding da empresa pelo domínio (público, sem autenticação)
-  const brandingQuery = trpc.empresa.branding.useQuery(undefined, {
+  // Ler empresaId da query string (?empresa=1)
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<number | undefined>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("empresa");
+    return id ? parseInt(id, 10) : undefined;
+  });
+
+  // Buscar lista pública de empresas (para o seletor)
+  const empresasQuery = trpc.empresa.listPublic.useQuery(undefined, {
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Buscar branding da empresa selecionada
+  const brandingInput = useMemo(
+    () => (selectedEmpresaId ? { empresaId: selectedEmpresaId } : undefined),
+    [selectedEmpresaId]
+  );
+  const brandingQuery = trpc.empresa.branding.useQuery(brandingInput, {
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -33,6 +51,9 @@ export default function Login({ onSuccess }: LoginProps) {
   const corPrimaria = branding?.corPrimaria || "#F97316";
   const corSecundaria = branding?.corSecundaria || "#FB923C";
   const corTextoPrimaria = branding?.corTextoPrimaria || "#FFFFFF";
+
+  const empresas = empresasQuery.data ?? [];
+  const hasMultipleEmpresas = empresas.length > 1;
 
   // Aplicar cores da empresa no fundo da página de login
   useEffect(() => {
@@ -61,6 +82,15 @@ export default function Login({ onSuccess }: LoginProps) {
     }
     loginMutation.mutate({ email, senha });
   };
+
+  function handleSelectEmpresa(id: number) {
+    setSelectedEmpresaId(id);
+    setShowEmpresaSelector(false);
+    // Atualizar query string sem recarregar
+    const url = new URL(window.location.href);
+    url.searchParams.set("empresa", String(id));
+    window.history.replaceState({}, "", url.toString());
+  }
 
   return (
     <div
@@ -95,9 +125,7 @@ export default function Login({ onSuccess }: LoginProps) {
                     className="h-16 w-16 rounded-xl shadow-lg object-contain bg-white/10 p-0.5"
                   />
                 ) : (
-                  <div
-                    className="h-16 w-16 rounded-xl shadow-lg flex items-center justify-center bg-white/20"
-                  >
+                  <div className="h-16 w-16 rounded-xl shadow-lg flex items-center justify-center bg-white/20">
                     <Building2 className="w-8 h-8" style={{ color: corTextoPrimaria }} />
                   </div>
                 )}
@@ -111,6 +139,78 @@ export default function Login({ onSuccess }: LoginProps) {
               <p className="text-sm mt-1" style={{ color: corTextoPrimaria, opacity: 0.8 }}>
                 Calculadora de Orçamento IRPF 2026
               </p>
+
+              {/* Seletor de empresa (se houver mais de uma) */}
+              {hasMultipleEmpresas && (
+                <div className="mt-3 relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmpresaSelector(!showEmpresaSelector)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-white/20 hover:bg-white/30"
+                    style={{ color: corTextoPrimaria }}
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    Trocar escritório
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showEmpresaSelector ? "rotate-180" : ""}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {showEmpresaSelector && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50"
+                      >
+                        <div className="p-2">
+                          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider px-2 py-1">
+                            Selecione o escritório
+                          </p>
+                          {empresas.map((emp: any) => (
+                            <button
+                              key={emp.id}
+                              onClick={() => handleSelectEmpresa(emp.id)}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                                branding?.id === emp.id
+                                  ? "bg-gray-100"
+                                  : "hover:bg-gray-50"
+                              }`}
+                            >
+                              {emp.logoUrl ? (
+                                <img
+                                  src={emp.logoUrl}
+                                  alt={emp.nome}
+                                  className="w-8 h-8 rounded-lg object-contain border border-gray-100 p-0.5"
+                                />
+                              ) : (
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                  style={{ backgroundColor: emp.corPrimaria + "20" }}
+                                >
+                                  <Building2 className="w-4 h-4" style={{ color: emp.corPrimaria }} />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-800 truncate">{emp.nome}</p>
+                                {branding?.id === emp.id && (
+                                  <p className="text-[10px] text-gray-400">Selecionado</p>
+                                )}
+                              </div>
+                              {branding?.id === emp.id && (
+                                <div
+                                  className="ml-auto w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: emp.corPrimaria }}
+                                />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           </div>
 

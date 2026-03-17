@@ -309,19 +309,47 @@ export const appRouter = router({
         return updateEmpresa(input.id, { logoUrl: url, logoKey: fileKey });
       }),
 
-    /** Branding público - retorna dados visuais da primeira empresa ativa (para login) */
-    branding: publicProcedure.query(async () => {
+    /** Branding público - retorna dados visuais de uma empresa ativa (para login) */
+    branding: publicProcedure
+      .input(z.object({ empresaId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const empresasList = await listEmpresas();
+        const ativas = empresasList.filter((e: any) => e.ativo);
+        if (ativas.length === 0) return null;
+
+        // Se empresaId foi fornecido, buscar essa empresa específica
+        let ativa = input?.empresaId
+          ? ativas.find((e: any) => e.id === input.empresaId)
+          : null;
+
+        // Fallback: empresa com menor ID (primeira cadastrada = principal)
+        if (!ativa) {
+          ativa = ativas.reduce((a: any, b: any) => (a.id < b.id ? a : b));
+        }
+
+        return {
+          id: ativa.id,
+          nome: ativa.nome,
+          logoUrl: ativa.logoUrl,
+          corPrimaria: ativa.corPrimaria,
+          corSecundaria: ativa.corSecundaria,
+          corTextoPrimaria: ativa.corTextoPrimaria,
+          responsavel: ativa.responsavel,
+        };
+      }),
+
+    /** Lista pública de empresas ativas (para seletor no login) */
+    listPublic: publicProcedure.query(async () => {
       const empresasList = await listEmpresas();
-      const ativa = empresasList.find((e: any) => e.ativo);
-      if (!ativa) return null;
-      return {
-        nome: ativa.nome,
-        logoUrl: ativa.logoUrl,
-        corPrimaria: ativa.corPrimaria,
-        corSecundaria: ativa.corSecundaria,
-        corTextoPrimaria: ativa.corTextoPrimaria,
-        responsavel: ativa.responsavel,
-      };
+      return empresasList
+        .filter((e: any) => e.ativo)
+        .map((e: any) => ({
+          id: e.id,
+          nome: e.nome,
+          logoUrl: e.logoUrl,
+          corPrimaria: e.corPrimaria,
+        }))
+        .sort((a: any, b: any) => a.id - b.id);
     }),
 
     /** Desativar empresa (superadmin) */

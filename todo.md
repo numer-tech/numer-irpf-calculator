@@ -109,3 +109,9 @@
 - [x] Criar rota backend que cria empresa + usuário admin vinculado em uma transação
 - [x] Atualizar página Empresas.tsx com os novos campos
 - [x] Testar e salvar checkpoint
+
+# TODO - Corrigir seleção de empresa no login
+
+- [x] Investigar como a rota branding seleciona a empresa exibida no login
+- [x] Permitir que o login exiba a empresa correta (Numer como principal/padrão)
+- [x] Testar e salvar checkpoint
