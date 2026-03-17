@@ -20,3 +20,9 @@
 - [x] Atualizar ChecklistSection com as fichas oficiais e ícones adequados
 - [x] Atualizar SettingsPanel para refletir as novas fichas
 - [x] Testar e salvar checkpoint
+
+# TODO - Agrupamento das Fichas por Categoria
+
+- [ ] Adicionar campo 'grupo' ao ItemPrecoConfig e definir grupos no hook
+- [ ] Atualizar ChecklistSection para renderizar grupos com cabeçalhos visuais
+- [ ] Testar e salvar checkpoint

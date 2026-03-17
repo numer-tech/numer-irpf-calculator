@@ -64,6 +64,7 @@ export interface ItemPrecoConfig {
   labelCompleto: string;
   precoUnitario: number;
   descricaoUnidade: string;
+  grupo: string;
 }
 
 export interface PricingConfig {
@@ -93,28 +94,27 @@ export interface CalculationResult {
   fichasIdentificadas: string[];
 }
 
+// ─── Grupos de fichas (ordem de exibição) ───
+export const GRUPOS_FICHAS = [
+  "Rendimentos Tributáveis",
+  "Rendimentos Isentos e Especiais",
+  "Imposto e Pagamentos",
+  "Dependentes e Alimentandos",
+  "Bens, Dívidas e Situações Especiais",
+] as const;
+
+export type GrupoFicha = typeof GRUPOS_FICHAS[number];
+
 // ─── Configuração padrão de preços unitários (fichas oficiais IRPF) ───
 export const defaultItensPreco: ItemPrecoConfig[] = [
-  {
-    key: "dependentes",
-    label: "Dependentes",
-    labelCompleto: "Dependentes",
-    precoUnitario: 15,
-    descricaoUnidade: "por dependente",
-  },
-  {
-    key: "alimentandos",
-    label: "Alimentandos",
-    labelCompleto: "Alimentandos",
-    precoUnitario: 15,
-    descricaoUnidade: "por alimentando",
-  },
+  // ── Rendimentos Tributáveis ──
   {
     key: "rendTribPJ",
     label: "Rend. Trib. Receb. de PJ",
     labelCompleto: "Rend. Trib. Receb. de Pessoa Jurídica",
     precoUnitario: 15,
     descricaoUnidade: "por informe",
+    grupo: "Rendimentos Tributáveis",
   },
   {
     key: "rendTribPFExterior",
@@ -122,20 +122,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     labelCompleto: "Rend. Trib. Recebidos de PF/Exterior (Carnê-Leão)",
     precoUnitario: 20,
     descricaoUnidade: "por fonte",
-  },
-  {
-    key: "rendimentosIsentos",
-    label: "Rendimentos Isentos e Não Tributáveis",
-    labelCompleto: "Rendimentos Isentos e Não Tributáveis",
-    precoUnitario: 10,
-    descricaoUnidade: "por informe",
-  },
-  {
-    key: "rendTributacaoExclusiva",
-    label: "Tributação Exclusiva/Definitiva",
-    labelCompleto: "Rendimentos Sujeitos à Tributação Exclusiva/Definitiva",
-    precoUnitario: 10,
-    descricaoUnidade: "por informe",
+    grupo: "Rendimentos Tributáveis",
   },
   {
     key: "rendExigibilidadeSuspensa",
@@ -143,6 +130,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     labelCompleto: "Rendimentos Tributáveis de PJ (Imposto com Exigibilidade Suspensa)",
     precoUnitario: 25,
     descricaoUnidade: "por processo",
+    grupo: "Rendimentos Tributáveis",
   },
   {
     key: "rendRecebidosAcumuladamente",
@@ -150,13 +138,33 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     labelCompleto: "Rendimentos Recebidos Acumuladamente (RRA)",
     precoUnitario: 30,
     descricaoUnidade: "por processo",
+    grupo: "Rendimentos Tributáveis",
   },
+  // ── Rendimentos Isentos e Especiais ──
+  {
+    key: "rendimentosIsentos",
+    label: "Rendimentos Isentos e Não Tributáveis",
+    labelCompleto: "Rendimentos Isentos e Não Tributáveis",
+    precoUnitario: 10,
+    descricaoUnidade: "por informe",
+    grupo: "Rendimentos Isentos e Especiais",
+  },
+  {
+    key: "rendTributacaoExclusiva",
+    label: "Tributação Exclusiva/Definitiva",
+    labelCompleto: "Rendimentos Sujeitos à Tributação Exclusiva/Definitiva",
+    precoUnitario: 10,
+    descricaoUnidade: "por informe",
+    grupo: "Rendimentos Isentos e Especiais",
+  },
+  // ── Imposto e Pagamentos ──
   {
     key: "impostoPagoRetido",
     label: "Imposto Pago/Retido",
     labelCompleto: "Imposto Pago/Retido",
     precoUnitario: 10,
     descricaoUnidade: "por fonte",
+    grupo: "Imposto e Pagamentos",
   },
   {
     key: "pagamentosEfetuados",
@@ -164,6 +172,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     labelCompleto: "Pagamentos Efetuados (médicos, educação, pensão, etc.)",
     precoUnitario: 8,
     descricaoUnidade: "por lançamento",
+    grupo: "Imposto e Pagamentos",
   },
   {
     key: "doacoesEfetuadas",
@@ -171,27 +180,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     labelCompleto: "Doações Efetuadas",
     precoUnitario: 10,
     descricaoUnidade: "por doação",
-  },
-  {
-    key: "bensEDireitos",
-    label: "Bens e Direitos",
-    labelCompleto: "Bens e Direitos (imóveis, veículos, contas, aplicações, criptos, etc.)",
-    precoUnitario: 15,
-    descricaoUnidade: "por bem",
-  },
-  {
-    key: "dividasOnus",
-    label: "Dívidas e Ônus Reais",
-    labelCompleto: "Dívidas e Ônus Reais",
-    precoUnitario: 10,
-    descricaoUnidade: "por dívida",
-  },
-  {
-    key: "espolio",
-    label: "Espólio",
-    labelCompleto: "Espólio",
-    precoUnitario: 100,
-    descricaoUnidade: "por espólio",
+    grupo: "Imposto e Pagamentos",
   },
   {
     key: "doacoesPartidos",
@@ -199,6 +188,49 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     labelCompleto: "Doações a Partidos Políticos e Candidatos",
     precoUnitario: 15,
     descricaoUnidade: "por doação",
+    grupo: "Imposto e Pagamentos",
+  },
+  // ── Dependentes e Alimentandos ──
+  {
+    key: "dependentes",
+    label: "Dependentes",
+    labelCompleto: "Dependentes",
+    precoUnitario: 15,
+    descricaoUnidade: "por dependente",
+    grupo: "Dependentes e Alimentandos",
+  },
+  {
+    key: "alimentandos",
+    label: "Alimentandos",
+    labelCompleto: "Alimentandos",
+    precoUnitario: 15,
+    descricaoUnidade: "por alimentando",
+    grupo: "Dependentes e Alimentandos",
+  },
+  // ── Bens, Dívidas e Situações Especiais ──
+  {
+    key: "bensEDireitos",
+    label: "Bens e Direitos",
+    labelCompleto: "Bens e Direitos (imóveis, veículos, contas, aplicações, criptos, etc.)",
+    precoUnitario: 15,
+    descricaoUnidade: "por bem",
+    grupo: "Bens, Dívidas e Situações Especiais",
+  },
+  {
+    key: "dividasOnus",
+    label: "Dívidas e Ônus Reais",
+    labelCompleto: "Dívidas e Ônus Reais",
+    precoUnitario: 10,
+    descricaoUnidade: "por dívida",
+    grupo: "Bens, Dívidas e Situações Especiais",
+  },
+  {
+    key: "espolio",
+    label: "Espólio",
+    labelCompleto: "Espólio",
+    precoUnitario: 100,
+    descricaoUnidade: "por espólio",
+    grupo: "Bens, Dívidas e Situações Especiais",
   },
 ];
 
