@@ -217,7 +217,7 @@ export const appRouter = router({
         cnpj: z.string().optional(),
         crc: z.string().optional(),
         responsavel: z.string().optional(),
-        email: z.string().email().optional(),
+        email: z.string().email().optional().or(z.literal("")),
         telefone: z.string().optional(),
         whatsapp: z.string().optional(),
         endereco: z.string().optional(),
@@ -227,6 +227,8 @@ export const appRouter = router({
         corTextoPrimaria: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
+        // Normalizar email vazio para undefined
+        if (input.email === "") input.email = undefined;
         return createEmpresa(input);
       }),
 
@@ -238,7 +240,7 @@ export const appRouter = router({
         cnpj: z.string().nullable().optional(),
         crc: z.string().nullable().optional(),
         responsavel: z.string().nullable().optional(),
-        email: z.string().nullable().optional(),
+        email: z.string().email().nullable().optional().or(z.literal("")),
         telefone: z.string().nullable().optional(),
         whatsapp: z.string().nullable().optional(),
         endereco: z.string().nullable().optional(),
@@ -255,6 +257,8 @@ export const appRouter = router({
         if (user.role !== "superadmin" && user.empresaId !== input.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
         }
+        // Normalizar email vazio para null
+        if (input.email === "") (input as any).email = null;
         const { id, ...data } = input;
         return updateEmpresa(id, data);
       }),

@@ -96,3 +96,9 @@
 - [x] Atualizar ProposalView para usar dados da empresa na proposta
 - [x] Painel super-admin (Higor) para gerenciar todas as empresas
 - [x] Testar e salvar checkpoint
+
+# TODO - Bug Fix: Erro de validação de e-mail ao atualizar empresa
+
+- [x] Corrigir validação Zod do campo email na rota empresa.update (aceitar string vazia ou null)
+- [x] Corrigir validação Zod do campo email na rota empresa.create
+- [x] Testar e salvar checkpoint
