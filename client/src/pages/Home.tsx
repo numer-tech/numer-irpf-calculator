@@ -9,7 +9,6 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -19,11 +18,9 @@ import ResultPanel from "@/components/ResultPanel";
 import ProposalView from "@/components/ProposalView";
 import SettingsPanel from "@/components/SettingsPanel";
 import { useIRPFCalculator } from "@/hooks/useIRPFCalculator";
-import { Button } from "@/components/ui/button";
-import { Save, History, LogIn } from "lucide-react";
 
 export default function Home() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
   const [, navigate] = useLocation();
 
   const {
@@ -56,10 +53,6 @@ export default function Home() {
   });
 
   const handleSalvar = () => {
-    if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
-      return;
-    }
     if (!clientData.nome.trim()) {
       toast.error("Informe pelo menos o nome do cliente.");
       return;
@@ -85,6 +78,11 @@ export default function Home() {
     });
   };
 
+  const handleLogout = async () => {
+    await logout();
+    window.location.reload();
+  };
+
   if (showProposal) {
     return (
       <ProposalView
@@ -101,13 +99,10 @@ export default function Home() {
       <Header
         onReset={resetAll}
         onOpenSettings={() => setShowSettings(true)}
-        onOpenHistorico={() => {
-          if (!isAuthenticated) {
-            window.location.href = getLoginUrl();
-            return;
-          }
-          navigate("/historico");
-        }}
+        onOpenHistorico={() => navigate("/historico")}
+        userName={user?.name}
+        userRole={user?.role}
+        onLogout={handleLogout}
       />
 
       {/* Settings Panel */}
@@ -133,12 +128,14 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <h2
-              className="text-xl sm:text-2xl font-bold text-white mb-1"
-              style={{ fontFamily: "'Sora', sans-serif" }}
-            >
-              Calculadora de Orçamento IRPF 2026
-            </h2>
+            <div className="flex items-center gap-3 mb-1">
+              <h2
+                className="text-xl sm:text-2xl font-bold text-white"
+                style={{ fontFamily: "'Sora', sans-serif" }}
+              >
+                Calculadora de Orçamento IRPF 2026
+              </h2>
+            </div>
             <p className="text-sm text-white/80 max-w-lg">
               Informe a quantidade de itens em cada ficha do cliente.
               O valor do serviço será calculado automaticamente com base no preço unitário de cada item.

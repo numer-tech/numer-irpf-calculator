@@ -23,6 +23,17 @@
 
 # TODO - Agrupamento das Fichas por Categoria
 
-- [ ] Adicionar campo 'grupo' ao ItemPrecoConfig e definir grupos no hook
-- [ ] Atualizar ChecklistSection para renderizar grupos com cabeçalhos visuais
-- [ ] Testar e salvar checkpoint
+- [x] Adicionar campo 'grupo' ao ItemPrecoConfig e definir grupos no hook
+- [x] Atualizar ChecklistSection para renderizar grupos com cabeçalhos visuais
+- [x] Testar e salvar checkpoint
+
+# TODO - Sistema de Login e Controle de Acesso
+
+- [x] Adicionar campo userId na tabela de orçamentos (vincular ao criador)
+- [x] Atualizar rotas tRPC para filtrar orçamentos por usuário logado
+- [x] Criar rota admin que lista todos os orçamentos de todos os usuários
+- [x] Adicionar tela de login obrigatória antes de acessar a calculadora
+- [x] Implementar painel admin para Higor (master) ver todos os orçamentos
+- [x] Filtro por usuário no painel admin
+- [x] Atualizar testes vitest
+- [x] Testar e salvar checkpoint

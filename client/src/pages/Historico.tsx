@@ -1,9 +1,10 @@
 /*
  * Historico - Página de histórico de orçamentos
- * Lista todos os orçamentos salvos com filtros, status, comprovante e exclusão
+ * Admin vê todos os orçamentos (com nome do criador)
+ * Usuário comum vê apenas os seus próprios
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
@@ -13,6 +14,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,17 +44,21 @@ import {
   Filter,
   Calendar,
   User,
-  DollarSign,
   Loader2,
-  Image as ImageIcon,
   AlertCircle,
+  ShieldCheck,
+  Users,
 } from "lucide-react";
 
-const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
+const LOGO_URL =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 
 type StatusFilter = "todos" | "pendente" | "aprovado" | "concluido" | "cancelado";
 
-const statusConfig: Record<string, { label: string; icon: React.ReactNode; color: string; bgColor: string }> = {
+const statusConfig: Record<
+  string,
+  { label: string; icon: React.ReactNode; color: string; bgColor: string }
+> = {
   pendente: {
     label: "Pendente",
     icon: <Clock className="w-3.5 h-3.5" />,
@@ -98,20 +110,48 @@ export default function Historico() {
   const [, navigate] = useLocation();
   const [filter, setFilter] = useState<StatusFilter>("todos");
   const [searchTerm, setSearchTerm] = useState("");
+  const [creatorFilter, setCreatorFilter] = useState<string>("todos");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isAdmin = user?.role === "admin";
   const utils = trpc.useUtils();
 
-  const { data: orcamentos, isLoading } = trpc.orcamento.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  // Admin usa listAll, usuário comum usa list
+  const { data: adminOrcamentos, isLoading: isLoadingAdmin } =
+    trpc.orcamento.listAll.useQuery(undefined, {
+      enabled: isAuthenticated && isAdmin,
+    });
+
+  const { data: userOrcamentos, isLoading: isLoadingUser } =
+    trpc.orcamento.list.useQuery(undefined, {
+      enabled: isAuthenticated && !isAdmin,
+    });
+
+  const orcamentos = isAdmin ? adminOrcamentos : userOrcamentos;
+  const isLoading = isAdmin ? isLoadingAdmin : isLoadingUser;
+
+  // Lista de criadores únicos (para admin)
+  const creators = useMemo(() => {
+    if (!isAdmin || !adminOrcamentos) return [];
+    const map = new Map<number, string>();
+    for (const orc of adminOrcamentos) {
+      if (orc.criadoPor && !map.has(orc.criadoPor)) {
+        map.set(orc.criadoPor, (orc as any).criadorNome || "Desconhecido");
+      }
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [isAdmin, adminOrcamentos]);
 
   const deleteMutation = trpc.orcamento.delete.useMutation({
     onSuccess: () => {
       toast.success("Orçamento excluído com sucesso!");
-      utils.orcamento.list.invalidate();
+      if (isAdmin) {
+        utils.orcamento.listAll.invalidate();
+      } else {
+        utils.orcamento.list.invalidate();
+      }
       setDeleteId(null);
     },
     onError: (err) => toast.error(`Erro ao excluir: ${err.message}`),
@@ -120,7 +160,11 @@ export default function Historico() {
   const updateStatusMutation = trpc.orcamento.updateStatus.useMutation({
     onSuccess: () => {
       toast.success("Status atualizado!");
-      utils.orcamento.list.invalidate();
+      if (isAdmin) {
+        utils.orcamento.listAll.invalidate();
+      } else {
+        utils.orcamento.list.invalidate();
+      }
     },
     onError: (err) => toast.error(`Erro: ${err.message}`),
   });
@@ -128,7 +172,11 @@ export default function Historico() {
   const uploadComprovanteMutation = trpc.orcamento.uploadComprovante.useMutation({
     onSuccess: () => {
       toast.success("Comprovante anexado com sucesso!");
-      utils.orcamento.list.invalidate();
+      if (isAdmin) {
+        utils.orcamento.listAll.invalidate();
+      } else {
+        utils.orcamento.list.invalidate();
+      }
       setUploadingId(null);
     },
     onError: (err) => {
@@ -166,8 +214,6 @@ export default function Historico() {
       });
     };
     reader.readAsDataURL(file);
-
-    // Reset input
     e.target.value = "";
   };
 
@@ -181,12 +227,15 @@ export default function Historico() {
   // Filter and search
   const filtered = (orcamentos ?? []).filter((orc) => {
     if (filter !== "todos" && orc.status !== filter) return false;
+    if (isAdmin && creatorFilter !== "todos" && orc.criadoPor !== Number(creatorFilter))
+      return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
         orc.clienteNome.toLowerCase().includes(term) ||
         (orc.clienteCpf && orc.clienteCpf.toLowerCase().includes(term)) ||
-        (orc.clienteEmail && orc.clienteEmail.toLowerCase().includes(term))
+        (orc.clienteEmail && orc.clienteEmail.toLowerCase().includes(term)) ||
+        ((orc as any).criadorNome && (orc as any).criadorNome.toLowerCase().includes(term))
       );
     }
     return true;
@@ -199,8 +248,12 @@ export default function Historico() {
     aprovados: orcamentos?.filter((o) => o.status === "aprovado").length ?? 0,
     concluidos: orcamentos?.filter((o) => o.status === "concluido").length ?? 0,
     cancelados: orcamentos?.filter((o) => o.status === "cancelado").length ?? 0,
-    valorTotal: orcamentos?.reduce((sum, o) => sum + parseFloat(o.valorFinal), 0) ?? 0,
-    valorConcluidos: orcamentos?.filter((o) => o.status === "concluido").reduce((sum, o) => sum + parseFloat(o.valorFinal), 0) ?? 0,
+    valorTotal:
+      orcamentos?.reduce((sum, o) => sum + parseFloat(o.valorFinal), 0) ?? 0,
+    valorConcluidos:
+      orcamentos
+        ?.filter((o) => o.status === "concluido")
+        .reduce((sum, o) => sum + parseFloat(o.valorFinal), 0) ?? 0,
   };
 
   if (!isAuthenticated) {
@@ -243,12 +296,20 @@ export default function Historico() {
             <Separator orientation="vertical" className="h-6" />
             <div className="flex items-center gap-2">
               <img src={LOGO_URL} alt="Numer" className="h-8 w-8 rounded-lg" />
-              <h1
-                className="text-base font-bold text-gray-900"
-                style={{ fontFamily: "'Sora', sans-serif" }}
-              >
-                Histórico de Orçamentos
-              </h1>
+              <div>
+                <h1
+                  className="text-base font-bold text-gray-900"
+                  style={{ fontFamily: "'Sora', sans-serif" }}
+                >
+                  Histórico de Orçamentos
+                </h1>
+                {isAdmin && (
+                  <p className="text-[10px] text-orange-600 font-medium flex items-center gap-1 -mt-0.5">
+                    <ShieldCheck className="w-3 h-3" />
+                    Visualizando todos os orçamentos (Admin)
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -259,25 +320,37 @@ export default function Historico() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
             <p className="text-xs text-gray-500 mb-1">Total</p>
-            <p className="text-2xl font-bold text-gray-800" style={{ fontFamily: "'Sora', sans-serif" }}>
+            <p
+              className="text-2xl font-bold text-gray-800"
+              style={{ fontFamily: "'Sora', sans-serif" }}
+            >
               {stats.total}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
             <p className="text-xs text-amber-600 mb-1">Pendentes</p>
-            <p className="text-2xl font-bold text-amber-700" style={{ fontFamily: "'Sora', sans-serif" }}>
+            <p
+              className="text-2xl font-bold text-amber-700"
+              style={{ fontFamily: "'Sora', sans-serif" }}
+            >
               {stats.pendentes}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-emerald-100 p-4 shadow-sm">
             <p className="text-xs text-emerald-600 mb-1">Concluídos</p>
-            <p className="text-2xl font-bold text-emerald-700" style={{ fontFamily: "'Sora', sans-serif" }}>
+            <p
+              className="text-2xl font-bold text-emerald-700"
+              style={{ fontFamily: "'Sora', sans-serif" }}
+            >
               {stats.concluidos}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-orange-100 p-4 shadow-sm">
             <p className="text-xs text-orange-600 mb-1">Valor Concluídos</p>
-            <p className="text-lg font-bold text-orange-700" style={{ fontFamily: "'Sora', sans-serif" }}>
+            <p
+              className="text-lg font-bold text-orange-700"
+              style={{ fontFamily: "'Sora', sans-serif" }}
+            >
               {formatCurrency(stats.valorConcluidos)}
             </p>
           </div>
@@ -288,15 +361,42 @@ export default function Historico() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Buscar por nome, CPF ou e-mail..."
+              placeholder={
+                isAdmin
+                  ? "Buscar por nome, CPF, e-mail ou criador..."
+                  : "Buscar por nome, CPF ou e-mail..."
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 bg-white border-gray-200 focus:border-orange-300"
             />
           </div>
+
+          {/* Filtro por criador (admin only) */}
+          {isAdmin && creators.length > 0 && (
+            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+              <SelectTrigger className="w-[200px] bg-white border-gray-200">
+                <div className="flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5 text-gray-400" />
+                  <SelectValue placeholder="Filtrar por criador" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os usuários</SelectItem>
+                {creators.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <div className="flex items-center gap-1.5 flex-wrap">
             <Filter className="w-4 h-4 text-gray-400" />
-            {(["todos", "pendente", "aprovado", "concluido", "cancelado"] as const).map((f) => (
+            {(
+              ["todos", "pendente", "aprovado", "concluido", "cancelado"] as const
+            ).map((f) => (
               <Button
                 key={f}
                 variant={filter === f ? "default" : "outline"}
@@ -327,7 +427,7 @@ export default function Historico() {
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 mb-1">Nenhum orçamento encontrado</p>
             <p className="text-xs text-gray-400">
-              {searchTerm || filter !== "todos"
+              {searchTerm || filter !== "todos" || creatorFilter !== "todos"
                 ? "Tente alterar os filtros de busca"
                 : "Crie um orçamento na calculadora para vê-lo aqui"}
             </p>
@@ -340,6 +440,7 @@ export default function Historico() {
             {filtered.map((orc) => {
               const status = statusConfig[orc.status] ?? statusConfig.pendente;
               const resultado = orc.resultado as any;
+              const criadorNome = (orc as any).criadorNome;
 
               return (
                 <motion.div
@@ -355,8 +456,8 @@ export default function Historico() {
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       {/* Left: Client info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <User className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
                           <h3
                             className="text-sm font-bold text-gray-800 truncate"
                             style={{ fontFamily: "'Sora', sans-serif" }}
@@ -372,6 +473,13 @@ export default function Historico() {
                             {status.icon}
                             {status.label}
                           </button>
+                          {/* Criador badge (admin) */}
+                          {isAdmin && criadorNome && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-[10px] font-medium text-purple-700">
+                              <Users className="w-3 h-3" />
+                              {criadorNome}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -399,17 +507,22 @@ export default function Historico() {
                         {/* Fichas */}
                         {resultado?.fichasIdentificadas && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {(resultado.fichasIdentificadas as string[]).slice(0, 4).map((f: string) => (
-                              <span
-                                key={f}
-                                className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
-                              >
-                                {f}
-                              </span>
-                            ))}
-                            {(resultado.fichasIdentificadas as string[]).length > 4 && (
+                            {(resultado.fichasIdentificadas as string[])
+                              .slice(0, 4)
+                              .map((f: string) => (
+                                <span
+                                  key={f}
+                                  className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
+                                >
+                                  {f}
+                                </span>
+                              ))}
+                            {(resultado.fichasIdentificadas as string[]).length >
+                              4 && (
                               <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full">
-                                +{(resultado.fichasIdentificadas as string[]).length - 4}
+                                +
+                                {(resultado.fichasIdentificadas as string[])
+                                  .length - 4}
                               </span>
                             )}
                           </div>
@@ -439,7 +552,9 @@ export default function Historico() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(orc.comprovanteUrl!, "_blank")}
+                              onClick={() =>
+                                window.open(orc.comprovanteUrl!, "_blank")
+                              }
                               className="h-8 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -450,10 +565,14 @@ export default function Historico() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleFileUpload(orc.id)}
-                              disabled={uploadComprovanteMutation.isPending && uploadingId === orc.id}
+                              disabled={
+                                uploadComprovanteMutation.isPending &&
+                                uploadingId === orc.id
+                              }
                               className="h-8 text-xs gap-1 text-gray-500 border-gray-200 hover:border-orange-200 hover:text-orange-600"
                             >
-                              {uploadComprovanteMutation.isPending && uploadingId === orc.id ? (
+                              {uploadComprovanteMutation.isPending &&
+                              uploadingId === orc.id ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               ) : (
                                 <Upload className="w-3.5 h-3.5" />
@@ -488,7 +607,8 @@ export default function Historico() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir orçamento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O orçamento será permanentemente excluído.
+              Esta ação não pode ser desfeita. O orçamento será permanentemente
+              excluído.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,16 +1,18 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import {
   createOrcamento,
-  listOrcamentos,
+  listOrcamentosByUser,
+  listAllOrcamentos,
   getOrcamentoById,
   updateOrcamentoStatus,
   updateOrcamentoComprovante,
   updateOrcamentoObservacoes,
   deleteOrcamento,
+  listUsers,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -27,19 +29,40 @@ export const appRouter = router({
   }),
 
   orcamento: router({
-    /** Listar todos os orçamentos */
-    list: protectedProcedure.query(async () => {
-      return listOrcamentos();
+    /** Listar orçamentos do usuário logado */
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return listOrcamentosByUser(ctx.user.id);
     }),
 
-    /** Buscar um orçamento por ID */
-    getById: protectedProcedure
-      .input(z.object({ id: z.number() }))
+    /** Listar TODOS os orçamentos (somente admin) */
+    listAll: adminProcedure
+      .input(
+        z.object({
+          userId: z.number().optional(),
+        }).optional()
+      )
       .query(async ({ input }) => {
-        return getOrcamentoById(input.id);
+        const all = await listAllOrcamentos();
+        if (input?.userId) {
+          return all.filter((o) => o.criadoPor === input.userId);
+        }
+        return all;
       }),
 
-    /** Criar novo orçamento */
+    /** Buscar um orçamento por ID (verifica permissão) */
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const orc = await getOrcamentoById(input.id);
+        if (!orc) return null;
+        // Admin pode ver qualquer orçamento, usuário só o seu
+        if (ctx.user.role !== "admin" && orc.criadoPor !== ctx.user.id) {
+          return null;
+        }
+        return orc;
+      }),
+
+    /** Criar novo orçamento (vinculado ao usuário logado) */
     create: protectedProcedure
       .input(
         z.object({
@@ -69,7 +92,7 @@ export const appRouter = router({
         });
       }),
 
-    /** Atualizar status do orçamento */
+    /** Atualizar status do orçamento (verifica permissão) */
     updateStatus: protectedProcedure
       .input(
         z.object({
@@ -77,11 +100,16 @@ export const appRouter = router({
           status: z.enum(["pendente", "aprovado", "concluido", "cancelado"]),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const orc = await getOrcamentoById(input.id);
+        if (!orc) throw new Error("Orçamento não encontrado");
+        if (ctx.user.role !== "admin" && orc.criadoPor !== ctx.user.id) {
+          throw new Error("Sem permissão");
+        }
         return updateOrcamentoStatus(input.id, input.status);
       }),
 
-    /** Upload de comprovante de pagamento */
+    /** Upload de comprovante de pagamento (verifica permissão) */
     uploadComprovante: protectedProcedure
       .input(
         z.object({
@@ -91,7 +119,12 @@ export const appRouter = router({
           mimeType: z.string(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const orc = await getOrcamentoById(input.id);
+        if (!orc) throw new Error("Orçamento não encontrado");
+        if (ctx.user.role !== "admin" && orc.criadoPor !== ctx.user.id) {
+          throw new Error("Sem permissão");
+        }
         const buffer = Buffer.from(input.fileBase64, "base64");
         const suffix = nanoid(8);
         const fileKey = `comprovantes/${input.id}-${suffix}-${input.fileName}`;
@@ -99,7 +132,7 @@ export const appRouter = router({
         return updateOrcamentoComprovante(input.id, url, fileKey);
       }),
 
-    /** Atualizar observações */
+    /** Atualizar observações (verifica permissão) */
     updateObservacoes: protectedProcedure
       .input(
         z.object({
@@ -107,16 +140,34 @@ export const appRouter = router({
           observacoes: z.string(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const orc = await getOrcamentoById(input.id);
+        if (!orc) throw new Error("Orçamento não encontrado");
+        if (ctx.user.role !== "admin" && orc.criadoPor !== ctx.user.id) {
+          throw new Error("Sem permissão");
+        }
         return updateOrcamentoObservacoes(input.id, input.observacoes);
       }),
 
-    /** Excluir orçamento */
+    /** Excluir orçamento (verifica permissão) */
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const orc = await getOrcamentoById(input.id);
+        if (!orc) throw new Error("Orçamento não encontrado");
+        if (ctx.user.role !== "admin" && orc.criadoPor !== ctx.user.id) {
+          throw new Error("Sem permissão");
+        }
         return deleteOrcamento(input.id);
       }),
+  }),
+
+  /** Rotas administrativas */
+  admin: router({
+    /** Listar todos os usuários */
+    listUsers: adminProcedure.query(async () => {
+      return listUsers();
+    }),
   }),
 });
 

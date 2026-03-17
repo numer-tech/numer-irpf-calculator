@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, orcamentos, InsertOrcamento, Orcamento } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -88,6 +88,20 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/** Lista todos os usuários (para admin) */
+export async function listUsers() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    createdAt: users.createdAt,
+  }).from(users).orderBy(desc(users.createdAt));
+}
+
 // ─── Orçamentos ────────────────────────────────────────────
 
 export async function createOrcamento(data: InsertOrcamento) {
@@ -99,6 +113,48 @@ export async function createOrcamento(data: InsertOrcamento) {
   return getOrcamentoById(insertId);
 }
 
+/** Lista orçamentos de um usuário específico */
+export async function listOrcamentosByUser(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select({
+      orcamento: orcamentos,
+      criadorNome: users.name,
+    })
+    .from(orcamentos)
+    .leftJoin(users, eq(orcamentos.criadoPor, users.id))
+    .where(eq(orcamentos.criadoPor, userId))
+    .orderBy(desc(orcamentos.createdAt));
+
+  return rows.map((r) => ({
+    ...r.orcamento,
+    criadorNome: r.criadorNome ?? "Desconhecido",
+  }));
+}
+
+/** Lista TODOS os orçamentos (admin) com nome do criador */
+export async function listAllOrcamentos() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select({
+      orcamento: orcamentos,
+      criadorNome: users.name,
+    })
+    .from(orcamentos)
+    .leftJoin(users, eq(orcamentos.criadoPor, users.id))
+    .orderBy(desc(orcamentos.createdAt));
+
+  return rows.map((r) => ({
+    ...r.orcamento,
+    criadorNome: r.criadorNome ?? "Desconhecido",
+  }));
+}
+
+/** Mantém listOrcamentos para compatibilidade */
 export async function listOrcamentos() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

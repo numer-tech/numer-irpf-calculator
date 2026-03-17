@@ -10,8 +10,17 @@ vi.mock("./db", () => ({
     clienteCpf: "123.456.789-00",
     clienteTelefone: "(11) 99999-0000",
     clienteEmail: "joao@email.com",
-    checklist: { fontesRendimentoTributavel: 2, imoveis: 1 },
-    resultado: { nivelLabel: "Simples", valorBase: 150, valorItens: 45, valorTotal: 195, totalItens: 3, totalFichas: 2, fichasIdentificadas: ["Rendimentos", "Bens"], lineItems: [] },
+    checklist: { dependentes: 2, bensEDireitos: 1 },
+    resultado: {
+      nivelLabel: "Simples",
+      valorBase: 150,
+      valorItens: 45,
+      valorTotal: 195,
+      totalItens: 3,
+      totalFichas: 2,
+      fichasIdentificadas: ["Dependentes", "Bens e Direitos"],
+      lineItems: [],
+    },
     valorCalculado: "195.00",
     valorFinal: "200.00",
     status: "pendente",
@@ -22,7 +31,7 @@ vi.mock("./db", () => ({
     createdAt: new Date(),
     updatedAt: new Date(),
   }),
-  listOrcamentos: vi.fn().mockResolvedValue([
+  listOrcamentosByUser: vi.fn().mockResolvedValue([
     {
       id: 1,
       clienteNome: "João Silva",
@@ -30,25 +39,43 @@ vi.mock("./db", () => ({
       status: "pendente",
       valorFinal: "200.00",
       valorCalculado: "195.00",
+      criadoPor: 1,
+      criadorNome: "Test User",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]),
+  listAllOrcamentos: vi.fn().mockResolvedValue([
+    {
+      id: 1,
+      clienteNome: "João Silva",
+      status: "pendente",
+      valorFinal: "200.00",
+      valorCalculado: "195.00",
+      criadoPor: 1,
+      criadorNome: "Test User",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
     {
       id: 2,
       clienteNome: "Maria Santos",
-      clienteCpf: "987.654.321-00",
       status: "concluido",
       valorFinal: "350.00",
       valorCalculado: "350.00",
+      criadoPor: 2,
+      criadorNome: "Other User",
       createdAt: new Date(),
       updatedAt: new Date(),
     },
   ]),
+  listOrcamentos: vi.fn().mockResolvedValue([]),
   getOrcamentoById: vi.fn().mockResolvedValue({
     id: 1,
     clienteNome: "João Silva",
     status: "pendente",
     valorFinal: "200.00",
+    criadoPor: 1,
   }),
   updateOrcamentoStatus: vi.fn().mockResolvedValue({
     id: 1,
@@ -66,6 +93,10 @@ vi.mock("./db", () => ({
     observacoes: "Cliente pagou via PIX",
   }),
   deleteOrcamento: vi.fn().mockResolvedValue({ success: true }),
+  listUsers: vi.fn().mockResolvedValue([
+    { id: 1, name: "Test User", email: "test@example.com", role: "user", createdAt: new Date() },
+    { id: 99, name: "Admin User", email: "admin@example.com", role: "admin", createdAt: new Date() },
+  ]),
   upsertUser: vi.fn(),
   getUserByOpenId: vi.fn(),
 }));
@@ -80,49 +111,61 @@ vi.mock("./storage", () => ({
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
-function createAuthContext() {
+function createContext(overrides?: Partial<AuthenticatedUser>): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1,
-    openId: "test-user",
+    openId: "test-user-1",
     email: "test@example.com",
     name: "Test User",
     loginMethod: "manus",
-    role: "admin",
+    role: "user",
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
+    ...overrides,
   };
 
-  const ctx: TrpcContext = {
+  return {
     user,
-    req: {
-      protocol: "https",
-      headers: {},
-    } as TrpcContext["req"],
-    res: {
-      clearCookie: vi.fn(),
-    } as unknown as TrpcContext["res"],
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
   };
-
-  return ctx;
 }
 
-describe("orcamento router", () => {
-  let caller: ReturnType<typeof appRouter.createCaller>;
+function createAdminContext(): TrpcContext {
+  return createContext({
+    id: 99,
+    openId: "admin-user",
+    name: "Admin User",
+    role: "admin",
+  });
+}
+
+function createUnauthContext(): TrpcContext {
+  return {
+    user: null,
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+  };
+}
+
+describe("orcamento router - CRUD operations", () => {
+  let adminCaller: ReturnType<typeof appRouter.createCaller>;
+  let userCaller: ReturnType<typeof appRouter.createCaller>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    const ctx = createAuthContext();
-    caller = appRouter.createCaller(ctx);
+    adminCaller = appRouter.createCaller(createAdminContext());
+    userCaller = appRouter.createCaller(createContext());
   });
 
   it("should create a new orcamento", async () => {
-    const result = await caller.orcamento.create({
+    const result = await userCaller.orcamento.create({
       clienteNome: "João Silva",
       clienteCpf: "123.456.789-00",
       clienteTelefone: "(11) 99999-0000",
       clienteEmail: "joao@email.com",
-      checklist: { fontesRendimentoTributavel: 2, imoveis: 1 },
+      checklist: { dependentes: 2, bensEDireitos: 1 },
       resultado: { nivelLabel: "Simples", valorBase: 150, valorItens: 45, valorTotal: 195 },
       valorCalculado: 195,
       valorFinal: 200,
@@ -133,64 +176,56 @@ describe("orcamento router", () => {
     expect(result?.status).toBe("pendente");
   });
 
-  it("should list all orcamentos", async () => {
-    const result = await caller.orcamento.list();
-
-    expect(result).toHaveLength(2);
+  it("user should list own orcamentos", async () => {
+    const result = await userCaller.orcamento.list();
+    expect(result).toHaveLength(1);
     expect(result[0].clienteNome).toBe("João Silva");
-    expect(result[1].clienteNome).toBe("Maria Santos");
   });
 
   it("should get orcamento by id", async () => {
-    const result = await caller.orcamento.getById({ id: 1 });
-
+    const result = await userCaller.orcamento.getById({ id: 1 });
     expect(result).toBeDefined();
     expect(result?.clienteNome).toBe("João Silva");
   });
 
   it("should update orcamento status", async () => {
-    const result = await caller.orcamento.updateStatus({
+    const result = await userCaller.orcamento.updateStatus({
       id: 1,
       status: "aprovado",
     });
-
     expect(result).toBeDefined();
     expect(result?.status).toBe("aprovado");
   });
 
   it("should upload comprovante", async () => {
     const base64Data = Buffer.from("fake-image-data").toString("base64");
-
-    const result = await caller.orcamento.uploadComprovante({
+    const result = await userCaller.orcamento.uploadComprovante({
       id: 1,
       fileBase64: base64Data,
       fileName: "comprovante.png",
       mimeType: "image/png",
     });
-
     expect(result).toBeDefined();
     expect(result?.comprovanteUrl).toContain("comprovante");
   });
 
   it("should update observacoes", async () => {
-    const result = await caller.orcamento.updateObservacoes({
+    const result = await userCaller.orcamento.updateObservacoes({
       id: 1,
       observacoes: "Cliente pagou via PIX",
     });
-
     expect(result).toBeDefined();
     expect(result?.observacoes).toBe("Cliente pagou via PIX");
   });
 
   it("should delete orcamento", async () => {
-    const result = await caller.orcamento.delete({ id: 1 });
-
+    const result = await userCaller.orcamento.delete({ id: 1 });
     expect(result).toEqual({ success: true });
   });
 
   it("should reject create with empty clienteNome", async () => {
     await expect(
-      caller.orcamento.create({
+      userCaller.orcamento.create({
         clienteNome: "",
         checklist: {},
         resultado: {},
@@ -202,10 +237,71 @@ describe("orcamento router", () => {
 
   it("should reject invalid status", async () => {
     await expect(
-      caller.orcamento.updateStatus({
+      userCaller.orcamento.updateStatus({
         id: 1,
         status: "invalid_status" as any,
       })
+    ).rejects.toThrow();
+  });
+});
+
+describe("orcamento router - access control", () => {
+  it("orcamento.list requires authentication", async () => {
+    const caller = appRouter.createCaller(createUnauthContext());
+    await expect(caller.orcamento.list()).rejects.toThrow();
+  });
+
+  it("orcamento.create requires authentication", async () => {
+    const caller = appRouter.createCaller(createUnauthContext());
+    await expect(
+      caller.orcamento.create({
+        clienteNome: "Test",
+        checklist: { dependentes: 1 },
+        resultado: {},
+        valorCalculado: 150,
+        valorFinal: 150,
+      })
+    ).rejects.toThrow();
+  });
+
+  it("orcamento.listAll requires admin role", async () => {
+    const userCaller = appRouter.createCaller(createContext());
+    await expect(userCaller.orcamento.listAll()).rejects.toThrow();
+  });
+
+  it("admin.listUsers requires admin role", async () => {
+    const userCaller = appRouter.createCaller(createContext());
+    await expect(userCaller.admin.listUsers()).rejects.toThrow();
+  });
+
+  it("admin can access listAll", async () => {
+    const adminCaller = appRouter.createCaller(createAdminContext());
+    const result = await adminCaller.orcamento.listAll();
+    expect(result).toHaveLength(2);
+  });
+
+  it("admin can filter listAll by userId", async () => {
+    const adminCaller = appRouter.createCaller(createAdminContext());
+    const result = await adminCaller.orcamento.listAll({ userId: 1 });
+    expect(result).toHaveLength(1);
+    expect(result[0].criadoPor).toBe(1);
+  });
+
+  it("admin can list users", async () => {
+    const adminCaller = appRouter.createCaller(createAdminContext());
+    const result = await adminCaller.admin.listUsers();
+    expect(result).toHaveLength(2);
+  });
+
+  it("orcamento.delete requires authentication", async () => {
+    const caller = appRouter.createCaller(createUnauthContext());
+    await expect(caller.orcamento.delete({ id: 1 })).rejects.toThrow();
+  });
+
+  it("orcamento.updateStatus requires authentication", async () => {
+    const caller = appRouter.createCaller(createUnauthContext());
+    await expect(
+      caller.orcamento.updateStatus({ id: 1, status: "aprovado" })
     ).rejects.toThrow();
   });
 });
