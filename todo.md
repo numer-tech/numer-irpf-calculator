@@ -12,3 +12,11 @@
 - [x] Adicionar navegação entre calculadora e histórico
 - [x] Escrever testes vitest para rotas de orçamento
 - [x] Testar e salvar checkpoint
+
+# TODO - Fichas Oficiais IRPF
+
+- [x] Atualizar ChecklistState com as 15 fichas oficiais do IRPF
+- [x] Atualizar itensPreco com preços unitários para cada ficha oficial
+- [x] Atualizar ChecklistSection com as fichas oficiais e ícones adequados
+- [x] Atualizar SettingsPanel para refletir as novas fichas
+- [x] Testar e salvar checkpoint
