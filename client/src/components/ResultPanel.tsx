@@ -13,6 +13,8 @@ import {
   Plus,
   Receipt,
   Package,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,8 @@ interface ResultPanelProps {
   valorAjustado: number | null;
   onValorChange: (valor: number | null) => void;
   onGerarProposta: () => void;
+  onSalvar?: () => void;
+  isSaving?: boolean;
 }
 
 const complexityColors: Record<ComplexityLevel, { bar: string; badge: string }> = {
@@ -60,6 +64,8 @@ export default function ResultPanel({
   valorAjustado,
   onValorChange,
   onGerarProposta,
+  onSalvar,
+  isSaving,
 }: ResultPanelProps) {
   const colors = complexityColors[resultado.nivel];
   const maxScore = 100;
@@ -260,15 +266,33 @@ export default function ResultPanel({
 
         <Separator className="bg-gray-100" />
 
-        {/* Botão gerar proposta */}
-        <Button
-          onClick={onGerarProposta}
-          className="w-full h-11 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold text-sm shadow-md shadow-orange-200/50 gap-2"
-        >
-          <FileCheck className="w-4 h-4" />
-          Gerar Proposta
-          <ArrowRight className="w-4 h-4" />
-        </Button>
+        {/* Botões de ação */}
+        <div className="space-y-2">
+          <Button
+            onClick={onGerarProposta}
+            className="w-full h-11 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold text-sm shadow-md shadow-orange-200/50 gap-2"
+          >
+            <FileCheck className="w-4 h-4" />
+            Gerar Proposta
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+
+          {onSalvar && (
+            <Button
+              onClick={onSalvar}
+              disabled={isSaving}
+              variant="outline"
+              className="w-full h-10 border-orange-200 text-orange-700 hover:bg-orange-50 hover:border-orange-300 font-medium text-sm gap-2"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? "Salvando..." : "Salvar Orçamento"}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -7,6 +7,11 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 import Header from "@/components/Header";
 import ClientDataForm from "@/components/ClientDataForm";
 import ChecklistSection from "@/components/ChecklistSection";
@@ -14,8 +19,13 @@ import ResultPanel from "@/components/ResultPanel";
 import ProposalView from "@/components/ProposalView";
 import SettingsPanel from "@/components/SettingsPanel";
 import { useIRPFCalculator } from "@/hooks/useIRPFCalculator";
+import { Button } from "@/components/ui/button";
+import { Save, History, LogIn } from "lucide-react";
 
 export default function Home() {
+  const { user, loading, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+
   const {
     clientData,
     checklist,
@@ -35,6 +45,46 @@ export default function Home() {
   const [showProposal, setShowProposal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
+  const createMutation = trpc.orcamento.create.useMutation({
+    onSuccess: () => {
+      toast.success("Orçamento salvo com sucesso!");
+      resetAll();
+    },
+    onError: (err) => {
+      toast.error(`Erro ao salvar: ${err.message}`);
+    },
+  });
+
+  const handleSalvar = () => {
+    if (!isAuthenticated) {
+      window.location.href = getLoginUrl();
+      return;
+    }
+    if (!clientData.nome.trim()) {
+      toast.error("Informe pelo menos o nome do cliente.");
+      return;
+    }
+    createMutation.mutate({
+      clienteNome: clientData.nome,
+      clienteCpf: clientData.cpf || undefined,
+      clienteTelefone: clientData.telefone || undefined,
+      clienteEmail: clientData.email || undefined,
+      checklist: { ...checklist } as Record<string, number>,
+      resultado: {
+        nivelLabel: resultado.nivelLabel,
+        valorBase: resultado.valorBase,
+        valorItens: resultado.valorItens,
+        valorTotal: resultado.valorTotal,
+        totalItens: resultado.totalItens,
+        totalFichas: resultado.totalFichas,
+        fichasIdentificadas: resultado.fichasIdentificadas,
+        lineItems: resultado.lineItems,
+      },
+      valorCalculado: resultado.valorTotal,
+      valorFinal,
+    });
+  };
+
   if (showProposal) {
     return (
       <ProposalView
@@ -48,7 +98,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      <Header onReset={resetAll} onOpenSettings={() => setShowSettings(true)} />
+      <Header
+        onReset={resetAll}
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenHistorico={() => {
+          if (!isAuthenticated) {
+            window.location.href = getLoginUrl();
+            return;
+          }
+          navigate("/historico");
+        }}
+      />
 
       {/* Settings Panel */}
       <SettingsPanel
@@ -127,6 +187,8 @@ export default function Home() {
                   valorAjustado={valorAjustado}
                   onValorChange={setValorAjustado}
                   onGerarProposta={() => setShowProposal(true)}
+                  onSalvar={handleSalvar}
+                  isSaving={createMutation.isPending}
                 />
               </motion.div>
 

@@ -1,9 +1,14 @@
-# TODO - Reformulação da Precificação por Item
+# TODO - Banco de Dados e Histórico de Orçamentos
 
-- [ ] Refatorar hook: trocar sistema de pontos por preço unitário x quantidade de itens por ficha
-- [ ] Manter complexidade como indicador visual (baseado na quantidade total de fichas/itens)
-- [ ] Atualizar checklist para permitir inserir quantidade numérica em cada item (não apenas sim/não)
-- [ ] Atualizar painel de resultado para mostrar detalhamento do valor (item x preço unitário)
-- [ ] Atualizar painel de configurações para editar preço unitário de cada item
-- [ ] Atualizar proposta com detalhamento dos itens e preços unitários
-- [ ] Testar e salvar checkpoint
+- [x] Upgrade para web-db-user (banco de dados + storage)
+- [x] Criar schema: tabela orcamentos (id, cliente, checklist, resultado, valor, status, comprovante, data)
+- [x] Criar rotas API: POST /api/orcamentos, GET /api/orcamentos, PATCH /api/orcamentos/:id, DELETE /api/orcamentos/:id
+- [x] Criar rota de upload de comprovante: POST /api/orcamentos/:id/comprovante
+- [x] Criar página de histórico com filtros (todos, feitos, não feitos)
+- [x] Implementar exclusão de orçamento
+- [x] Implementar alteração de status (feito/não feito)
+- [x] Implementar upload e visualização de comprovante de pagamento
+- [x] Integrar botão "Salvar Orçamento" na calculadora
+- [x] Adicionar navegação entre calculadora e histórico
+- [x] Escrever testes vitest para rotas de orçamento
+- [x] Testar e salvar checkpoint
