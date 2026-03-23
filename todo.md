@@ -142,3 +142,11 @@
 - [x] Atualizar exibição visual do item 01 para indicar "1ª incluída no valor base"
 - [x] Atualizar ProposalView para refletir a franquia no detalhamento
 - [x] Testar e salvar checkpoint
+
+# TODO - PDF da Proposta em A4
+
+- [x] Criar layout A4 dedicado para impressão/PDF com todas as cores preservadas
+- [x] Usar biblioteca html2canvas + jsPDF para captura fiel das cores
+- [x] Garantir que tudo cabe em uma única folha A4
+- [x] Adicionar botão "Baixar PDF" na barra de ações da proposta
+- [x] Testar e salvar checkpoint
