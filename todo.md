@@ -135,3 +135,10 @@
 - [x] Investigar e corrigir orçamentos da empresa 2 não aparecendo
 - [x] Verificar todas as páginas para garantir isolamento de dados por empresa
 - [x] Testar e salvar checkpoint
+
+# TODO - Franquia: 1ª Rend. Trib. PJ incluída no valor base
+
+- [x] Adicionar lógica de franquia no cálculo: item 01 (Rend. Trib. PJ) cobra apenas a partir da 2ª unidade
+- [x] Atualizar exibição visual do item 01 para indicar "1ª incluída no valor base"
+- [x] Atualizar ProposalView para refletir a franquia no detalhamento
+- [x] Testar e salvar checkpoint

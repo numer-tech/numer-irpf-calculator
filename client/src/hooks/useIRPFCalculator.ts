@@ -74,6 +74,8 @@ export interface LineItem {
   precoUnitario: number;
   subtotal: number;
   descricaoUnidade: string;
+  franquia?: number; // quantas unidades estão incluídas no valor base (sem cobrança extra)
+  qtdCobrado?: number; // quantidade efetivamente cobrada (após franquia)
 }
 
 export interface CalculationResult {
@@ -387,7 +389,9 @@ export function useIRPFCalculator() {
     for (const item of pricingConfig.itensPreco) {
       const qtd = checklist[item.key];
       if (qtd > 0) {
-        const subtotal = qtd * item.precoUnitario;
+        // Franquia: rendTribPJ — a 1ª unidade está incluída no valor base, cobra só a partir da 2ª
+        const qtdCobrado = item.key === "rendTribPJ" ? Math.max(0, qtd - 1) : qtd;
+        const subtotal = qtdCobrado * item.precoUnitario;
         valorItens += subtotal;
         totalItens += qtd;
         lineItems.push({
@@ -396,6 +400,8 @@ export function useIRPFCalculator() {
           precoUnitario: item.precoUnitario,
           subtotal,
           descricaoUnidade: item.descricaoUnidade,
+          franquia: item.key === "rendTribPJ" ? 1 : 0,
+          qtdCobrado,
         });
       }
     }

@@ -116,7 +116,10 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
         };
 
         const grupoSubtotal = itens.reduce((sum, item) => {
-          return sum + (checklist[item.key] as number) * item.precoUnitario;
+          const qtdItem = checklist[item.key] as number;
+          const franquiaItem = item.key === "rendTribPJ" ? 1 : 0;
+          const qtdCobradoItem = Math.max(0, qtdItem - franquiaItem);
+          return sum + qtdCobradoItem * item.precoUnitario;
         }, 0);
 
         const fichasAtivas = itens.filter((item) => (checklist[item.key] as number) > 0).length;
@@ -159,7 +162,10 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                 fichaIndex++;
                 const currentIndex = fichaIndex;
                 const qty = checklist[item.key] as number;
-                const subtotal = qty * item.precoUnitario;
+                // Franquia: rendTribPJ — 1ª unidade incluída no valor base
+                const franquia = item.key === "rendTribPJ" ? 1 : 0;
+                const qtdCobrado = Math.max(0, qty - franquia);
+                const subtotal = qtdCobrado * item.precoUnitario;
                 const isActive = qty > 0;
                 const fv = fichaVisuals[item.key] ?? {
                   icon: <FileText className="w-4 h-4" />,
@@ -193,9 +199,14 @@ export default function ChecklistSection({ checklist, onChange, itensPreco }: Ch
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {formatCurrency(item.precoUnitario)} {item.descricaoUnidade}
+                        {franquia > 0 && (
+                          <span className="ml-1.5 text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">
+                            1ª incluída
+                          </span>
+                        )}
                         {isActive && (
                           <span className="text-empresa font-semibold ml-1.5">
-                            — {formatCurrency(subtotal)}
+                            — {qtdCobrado > 0 ? formatCurrency(subtotal) : <span className="text-green-600">incluído</span>}
                           </span>
                         )}
                       </p>

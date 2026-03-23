@@ -405,25 +405,37 @@ export default function ProposalView({
                 </div>
 
                 {/* Line items */}
-                {resultado.lineItems.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center border-b border-gray-50 last:border-b-0"
-                  >
-                    <div className="col-span-5">
-                      <span className="text-sm text-gray-700">{item.label}</span>
+                {resultado.lineItems.map((item, idx) => {
+                  const temFranquia = (item.franquia ?? 0) > 0;
+                  const qtdCobrado = item.qtdCobrado ?? item.quantidade;
+                  return (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center border-b border-gray-50 last:border-b-0"
+                    >
+                      <div className="col-span-5">
+                        <span className="text-sm text-gray-700">{item.label}</span>
+                        {temFranquia && (
+                          <span className="ml-1.5 text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">
+                            1ª incluída
+                          </span>
+                        )}
+                      </div>
+                      <div className="col-span-2 text-center text-sm text-gray-600">
+                        {item.quantidade}
+                        {temFranquia && qtdCobrado < item.quantidade && (
+                          <span className="block text-[10px] text-green-600">({qtdCobrado} cobrado{qtdCobrado !== 1 ? 's' : ''})</span>
+                        )}
+                      </div>
+                      <div className="col-span-2 text-center text-sm text-gray-500">
+                        {formatCurrency(item.precoUnitario)}
+                      </div>
+                      <div className="col-span-3 text-right text-sm font-medium" style={{ color: qtdCobrado === 0 ? '#16a34a' : corPrimaria }}>
+                        {qtdCobrado === 0 ? 'incluído' : formatCurrency(item.subtotal)}
+                      </div>
                     </div>
-                    <div className="col-span-2 text-center text-sm text-gray-600">
-                      {item.quantidade}
-                    </div>
-                    <div className="col-span-2 text-center text-sm text-gray-500">
-                      {formatCurrency(item.precoUnitario)}
-                    </div>
-                    <div className="col-span-3 text-right text-sm font-medium" style={{ color: corPrimaria }}>
-                      {formatCurrency(item.subtotal)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Subtotal bruto */}
                 {descontosAtivos.length > 0 && (
