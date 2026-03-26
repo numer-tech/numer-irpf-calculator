@@ -174,3 +174,12 @@
 - [x] Atualizar ProposalView: dados fixos da Numer (nome, responsável, CRC)
 - [x] Persistir configurações de preços no banco (global)
 - [x] Testar e salvar checkpoint
+
+# TODO - Integração GitHub e Supabase
+
+- [ ] Exportar código para GitHub (higoraraujo18/calculadora-irpf)
+- [ ] Criar novo projeto Supabase com banco PostgreSQL
+- [ ] Adaptar schema Drizzle para PostgreSQL (remover tipos específicos de MySQL)
+- [ ] Migrar DATABASE_URL para Supabase
+- [ ] Testar todas as rotas com novo banco PostgreSQL
+- [ ] Salvar checkpoint final
