@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { trpc } from "@/lib/trpc";
 
 // ─── Tipos de dados do cliente (sem e-mail) ───
 export interface ClientData {
@@ -249,35 +250,21 @@ export const defaultPropostaConfig: PropostaConfig = {
   observacoes: "",
 };
 
-const STORAGE_KEY = "numer-irpf-pricing-config-v4";
 const DESCONTOS_KEY = "numer-irpf-descontos-v1";
 const PROPOSTA_KEY = "numer-irpf-proposta-config-v1";
 
-function loadConfig(): PricingConfig {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const mergedItens = defaultItensPreco.map((def) => {
-        const found = parsed.itensPreco?.find((p: ItemPrecoConfig) => p.key === def.key);
-        return found ? { ...def, precoUnitario: found.precoUnitario } : { ...def };
-      });
-      return {
-        valorBase: parsed.valorBase ?? DEFAULT_VALOR_BASE,
-        itensPreco: mergedItens,
-      };
-    }
-  } catch {}
+/** Mescla preços do banco com a lista padrão de itens (mantém labels e metadados) */
+function mergeDbPrecos(
+  itensPrecoDb: Record<string, number>,
+  valorBaseDb: number
+): PricingConfig {
   return {
-    valorBase: DEFAULT_VALOR_BASE,
-    itensPreco: defaultItensPreco.map((i) => ({ ...i })),
+    valorBase: valorBaseDb,
+    itensPreco: defaultItensPreco.map((def) => ({
+      ...def,
+      precoUnitario: itensPrecoDb[def.key] ?? def.precoUnitario,
+    })),
   };
-}
-
-function saveConfig(config: PricingConfig) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  } catch {}
 }
 
 function loadDescontos(): DescontoConfig[] {
@@ -364,14 +351,37 @@ export function useIRPFCalculator() {
   const [clientData, setClientData] = useState<ClientData>(initialClientData);
   const [checklist, setChecklist] = useState<ChecklistState>(initialChecklist);
   const [valorAjustado, setValorAjustado] = useState<number | null>(null);
-  const [pricingConfig, setPricingConfig] = useState<PricingConfig>(loadConfig);
+
+  // Preços: começa com padrão, depois sincroniza com o banco
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig>({
+    valorBase: DEFAULT_VALOR_BASE,
+    itensPreco: defaultItensPreco.map((i) => ({ ...i })),
+  });
+
   const [descontosConfig, setDescontosConfig] = useState<DescontoConfig[]>(loadDescontos);
   const [descontosAtivos, setDescontosAtivos] = useState<Record<string, boolean>>({});
   const [propostaConfig, setPropostaConfig] = useState<PropostaConfig>(loadPropostaConfig);
 
+  // ─── Carregar preços do banco ───
+  const { data: dbConfig } = trpc.config.getPrecos.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+
   useEffect(() => {
-    saveConfig(pricingConfig);
-  }, [pricingConfig]);
+    if (dbConfig) {
+      const itensPrecoDb = (dbConfig.itensPreco as Record<string, number>) ?? {};
+      const valorBaseDb = parseFloat(String(dbConfig.valorBase)) || DEFAULT_VALOR_BASE;
+      setPricingConfig(mergeDbPrecos(itensPrecoDb, valorBaseDb));
+    }
+  }, [dbConfig]);
+
+  // ─── Salvar preços no banco ───
+  const utils = trpc.useUtils();
+  const savePrecosMutation = trpc.config.savePrecos.useMutation({
+    onSuccess: () => {
+      utils.config.getPrecos.invalidate();
+    },
+  });
 
   useEffect(() => {
     saveDescontos(descontosConfig);
@@ -467,30 +477,51 @@ export function useIRPFCalculator() {
     setClientData((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  /** Atualiza preço de um item e persiste no banco */
   const updateItemPreco = useCallback((key: keyof ChecklistState, precoUnitario: number) => {
-    setPricingConfig((prev) => ({
-      ...prev,
-      itensPreco: prev.itensPreco.map((item) =>
-        item.key === key ? { ...item, precoUnitario } : item
-      ),
-    }));
+    setPricingConfig((prev) => {
+      const updated = {
+        ...prev,
+        itensPreco: prev.itensPreco.map((item) =>
+          item.key === key ? { ...item, precoUnitario } : item
+        ),
+      };
+      // Salvar no banco
+      const itensPrecoMap: Record<string, number> = {};
+      updated.itensPreco.forEach((i) => { itensPrecoMap[i.key] = i.precoUnitario; });
+      savePrecosMutation.mutate({ valorBase: updated.valorBase, itensPreco: itensPrecoMap });
+      return updated;
+    });
     setValorAjustado(null);
-  }, []);
+  }, [savePrecosMutation]);
 
+  /** Atualiza valor base e persiste no banco */
   const updateValorBase = useCallback((valor: number) => {
-    setPricingConfig((prev) => ({ ...prev, valorBase: valor }));
+    setPricingConfig((prev) => {
+      const updated = { ...prev, valorBase: valor };
+      // Salvar no banco
+      const itensPrecoMap: Record<string, number> = {};
+      updated.itensPreco.forEach((i) => { itensPrecoMap[i.key] = i.precoUnitario; });
+      savePrecosMutation.mutate({ valorBase: valor, itensPreco: itensPrecoMap });
+      return updated;
+    });
     setValorAjustado(null);
-  }, []);
+  }, [savePrecosMutation]);
 
   const resetConfig = useCallback(() => {
-    setPricingConfig({
+    const defaultConfig = {
       valorBase: DEFAULT_VALOR_BASE,
       itensPreco: defaultItensPreco.map((i) => ({ ...i })),
-    });
+    };
+    setPricingConfig(defaultConfig);
     setDescontosConfig(defaultDescontos.map((d) => ({ ...d })));
     setPropostaConfig({ ...defaultPropostaConfig });
     setValorAjustado(null);
-  }, []);
+    // Salvar padrões no banco
+    const itensPrecoMap: Record<string, number> = {};
+    defaultItensPreco.forEach((i) => { itensPrecoMap[i.key] = i.precoUnitario; });
+    savePrecosMutation.mutate({ valorBase: DEFAULT_VALOR_BASE, itensPreco: itensPrecoMap });
+  }, [savePrecosMutation]);
 
   const resetAll = useCallback(() => {
     setChecklist(initialChecklist);
@@ -550,6 +581,7 @@ export function useIRPFCalculator() {
     descontosConfig,
     descontosAtivos,
     propostaConfig,
+    isSavingPrecos: savePrecosMutation.isPending,
     setValorAjustado,
     updateChecklist,
     updateClientData,

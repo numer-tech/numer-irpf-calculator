@@ -26,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import type { ClientData, CalculationResult, PropostaConfig } from "@/hooks/useIRPFCalculator";
-import type { EmpresaData } from "@/hooks/useInternalAuth";
 
 const DEFAULT_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 const PROPOSAL_HEADER_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/proposal-header-54h6qUingoWxgiHNzuFjAU.webp";
@@ -36,7 +35,6 @@ export interface ProposalViewProps {
   resultado: CalculationResult;
   valorFinal: number;
   propostaConfig?: PropostaConfig;
-  empresa?: EmpresaData | null;
   onBack: () => void;
 }
 
@@ -68,11 +66,10 @@ function generateProposalText(
   clientData: ClientData,
   resultado: CalculationResult,
   valorFinal: number,
-  propConfig: PropostaConfig,
-  empresa?: EmpresaData | null
+  propConfig: PropostaConfig
 ): string {
-  const empresaNome = empresa?.nome || "Calculadora IRPF";
-  const responsavel = empresa?.responsavel || "";
+  const empresaNome = "Numer Contabilidade";
+  const responsavel = "Higor Araujo";
 
   const lines = [
     `═══════════════════════════════`,
@@ -145,11 +142,10 @@ function generateWhatsAppText(
   clientData: ClientData,
   resultado: CalculationResult,
   valorFinal: number,
-  propConfig: PropostaConfig,
-  empresa?: EmpresaData | null
+  propConfig: PropostaConfig
 ): string {
-  const empresaNome = empresa?.nome || "Calculadora IRPF";
-  const responsavel = empresa?.responsavel || "";
+  const empresaNome = "Numer Contabilidade";
+  const responsavel = "Higor Araujo";
 
   const lines = [
     `*${empresaNome.toUpperCase()}*`,
@@ -213,29 +209,28 @@ export default function ProposalView({
   resultado,
   valorFinal,
   propostaConfig,
-  empresa,
   onBack,
 }: ProposalViewProps) {
   const pdfRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const propConfig = propostaConfig ?? defaultPropostaForView;
 
-  const logoUrl = empresa?.logoUrl || DEFAULT_LOGO;
-  const empresaNome = empresa?.nome || "Calculadora IRPF";
-  const responsavel = empresa?.responsavel || "";
-  const corPrimaria = empresa?.corPrimaria || "#F97316";
-  const corSecundaria = empresa?.corSecundaria || "#FB923C";
-  const corTextoPrimaria = empresa?.corTextoPrimaria || "#FFFFFF";
+  const logoUrl = DEFAULT_LOGO;
+  const empresaNome = "Numer Contabilidade";
+  const responsavel = "Higor Araujo";
+  const corPrimaria = "#F97316";
+  const corSecundaria = "#FB923C";
+  const corTextoPrimaria = "#FFFFFF";
 
   const handleCopy = () => {
-    const text = generateProposalText(clientData, resultado, valorFinal, propConfig, empresa);
+    const text = generateProposalText(clientData, resultado, valorFinal, propConfig);
     navigator.clipboard.writeText(text).then(() => {
       toast.success("Proposta copiada para a área de transferência!");
     });
   };
 
   const handleWhatsApp = () => {
-    const text = generateWhatsAppText(clientData, resultado, valorFinal, propConfig, empresa);
+    const text = generateWhatsAppText(clientData, resultado, valorFinal, propConfig);
     const phone = clientData.telefone.replace(/\D/g, "");
     const url = phone
       ? `https://wa.me/55${phone}?text=${encodeURIComponent(text)}`

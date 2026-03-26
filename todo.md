@@ -150,3 +150,27 @@
 - [x] Garantir que tudo cabe em uma única folha A4
 - [x] Adicionar botão "Baixar PDF" na barra de ações da proposta
 - [x] Testar e salvar checkpoint
+
+# TODO - Persistência de Configurações de Preços no Banco
+
+- [x] Criar tabela `configPrecos` no schema (valorBase, itensPreco JSON)
+- [x] Executar pnpm db:push para migrar o banco
+- [x] Criar funções getConfigPrecos e upsertConfigPrecos no db.ts
+- [x] Criar rotas tRPC config.getPrecos e config.savePrecos no routers.ts
+- [x] Atualizar useIRPFCalculator para carregar preços do banco ao iniciar
+- [x] Atualizar useIRPFCalculator para salvar preços no banco ao alterar
+- [x] Testar e salvar checkpoint
+
+# TODO - Remover White Label / Simplificar para Numer
+
+- [x] Remover tabela empresas do schema (manter só internalUsers sem empresaId)
+- [x] Remover rotas tRPC de empresa, branding, superadmin do routers.ts
+- [x] Remover funções de empresa do db.ts
+- [x] Remover páginas Empresas.tsx e MinhaEmpresa.tsx
+- [x] Simplificar Login.tsx: sem seletor de empresa, cores fixas Numer (laranja)
+- [x] Simplificar Header.tsx: sem menu "Minha Empresa" / "Gerenciar Empresas"
+- [x] Remover EmpresaThemeInjector do App.tsx e usar cores fixas Numer no index.css
+- [x] Simplificar useInternalAuth: remover campo empresa
+- [x] Atualizar ProposalView: dados fixos da Numer (nome, responsável, CRC)
+- [x] Persistir configurações de preços no banco (global)
+- [x] Testar e salvar checkpoint

@@ -70,13 +70,8 @@ vi.mock("./db", () => ({
   deleteUserSessions: vi.fn().mockResolvedValue(undefined),
   getInternalUserByEmail: vi.fn().mockResolvedValue(null),
   getInternalUserById: vi.fn().mockResolvedValue(null),
-  listInternalUsersByEmpresa: vi.fn().mockResolvedValue([
-    { id: 1, nome: "Higor Araujo", email: "higor@numer.com.br", role: "admin", ativo: true, empresaId: 1 },
-    { id: 2, nome: "Maria Silva", email: "maria@numer.com.br", role: "user", ativo: true, empresaId: 1 },
-  ]),
-  listOrcamentosByEmpresa: vi.fn().mockResolvedValue([
-    { id: 1, clienteNome: "Jo\u00e3o Silva", status: "pendente", valorFinal: "180.00", criadoPor: 2, criadorNome: "Maria Silva", createdAt: new Date() },
-  ]),
+  getConfigPrecos: vi.fn().mockResolvedValue({ valorBase: "150.00", itensPreco: {} }),
+  upsertConfigPrecos: vi.fn().mockResolvedValue({ valorBase: "150.00", itensPreco: {} }),
   createSession: vi.fn().mockResolvedValue({ token: "tok123", expiresAt: new Date() }),
   getSessionByToken: vi.fn().mockResolvedValue(null),
   deleteSession: vi.fn().mockResolvedValue(undefined),
@@ -96,15 +91,6 @@ const adminUser: InternalUser = {
   nome: "Higor Araujo",
   email: "higor@numer.com.br",
   role: "admin",
-  ativo: true,
-  empresaId: 1,
-};
-
-const superAdminUser: InternalUser = {
-  id: 99,
-  nome: "Super Admin",
-  email: "super@numer.com.br",
-  role: "superadmin",
   ativo: true,
 };
 
@@ -211,8 +197,8 @@ describe("orcamento.list", () => {
 describe("orcamento.listAll (admin only)", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("superadmin lista todos os orçamentos", async () => {
-    const caller = appRouter.createCaller(createCtx(superAdminUser));
+  it("admin lista todos os orçamentos", async () => {
+    const caller = appRouter.createCaller(createCtx(adminUser));
     const result = await caller.orcamento.listAll();
     expect(result).toHaveLength(2);
   });

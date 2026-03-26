@@ -6,7 +6,6 @@ import bcrypt from "bcryptjs";
 import {
   createOrcamento,
   listOrcamentosByUser,
-  listOrcamentosByEmpresa,
   listAllOrcamentos,
   getOrcamentoById,
   updateOrcamentoStatus,
@@ -17,18 +16,14 @@ import {
   getInternalUserById,
   createInternalUser,
   listInternalUsers,
-  listInternalUsersByEmpresa,
   updateInternalUser,
   deleteInternalUser,
   createSession,
   getSessionByToken,
   deleteSession,
   deleteUserSessions,
-  createEmpresa,
-  getEmpresaById,
-  listEmpresas,
-  updateEmpresa,
-  deleteEmpresa,
+  getConfigPrecos,
+  upsertConfigPrecos,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -57,7 +52,6 @@ async function getInternalSession(req: any) {
 
 /** Procedure protegida com autenticação interna */
 const internalProtectedProcedure = publicProcedure.use(async ({ ctx, next }) => {
-  // Support pre-injected internalUser (e.g. in tests)
   if (ctx.internalUser && ctx.internalUser.ativo) {
     return next({ ctx });
   }
@@ -68,19 +62,10 @@ const internalProtectedProcedure = publicProcedure.use(async ({ ctx, next }) => 
   return next({ ctx: { ...ctx, internalUser: session.user } });
 });
 
-/** Procedure de admin interno (admin da empresa OU superadmin) */
+/** Procedure de admin (apenas admins da Numer) */
 const internalAdminProcedure = internalProtectedProcedure.use(async ({ ctx, next }) => {
-  const role = ctx.internalUser!.role;
-  if (role !== "admin" && role !== "superadmin") {
+  if (ctx.internalUser!.role !== "admin") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a administradores" });
-  }
-  return next({ ctx });
-});
-
-/** Procedure de superadmin (apenas Higor / dono do sistema) */
-const superAdminProcedure = internalProtectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.internalUser!.role !== "superadmin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito ao super administrador" });
   }
   return next({ ctx });
 });
@@ -105,40 +90,14 @@ export const appRouter = router({
         if (!valid) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "E-mail ou senha incorretos" });
         }
-        const { token, expiresAt } = await createSession(user.id);
+        const { token } = await createSession(user.id);
         ctx.res.cookie(SESSION_COOKIE, token, COOKIE_OPTIONS);
-
-        // Buscar empresa do usuário
-        let empresa = null;
-        if (user.empresaId) {
-          empresa = await getEmpresaById(user.empresaId);
-        }
 
         return {
           id: user.id,
           nome: user.nome,
           email: user.email,
           role: user.role,
-          empresaId: user.empresaId,
-          empresa: empresa ? {
-            id: empresa.id,
-            nome: empresa.nome,
-            logoUrl: empresa.logoUrl,
-            corPrimaria: empresa.corPrimaria,
-            corSecundaria: empresa.corSecundaria,
-            corTextoPrimaria: empresa.corTextoPrimaria,
-            responsavel: empresa.responsavel,
-            telefone: empresa.telefone,
-            whatsapp: empresa.whatsapp,
-            email: empresa.email,
-            cnpj: empresa.cnpj,
-            crc: empresa.crc,
-            endereco: empresa.endereco,
-            site: empresa.site,
-            configProposta: empresa.configProposta,
-            configPrecos: empresa.configPrecos,
-            configDescontos: empresa.configDescontos,
-          } : null,
         };
       }),
 
@@ -152,211 +111,39 @@ export const appRouter = router({
       return { success: true };
     }),
 
-    /** Retorna o usuário logado com dados da empresa */
+    /** Retorna o usuário logado */
     me: publicProcedure.query(async ({ ctx }) => {
       const session = await getInternalSession(ctx.req);
       if (!session || !session.user.ativo) return null;
-
-      let empresa = null;
-      if (session.user.empresaId) {
-        empresa = await getEmpresaById(session.user.empresaId);
-      }
 
       return {
         id: session.user.id,
         nome: session.user.nome,
         email: session.user.email,
         role: session.user.role,
-        empresaId: session.user.empresaId,
-        empresa: empresa ? {
-          id: empresa.id,
-          nome: empresa.nome,
-          logoUrl: empresa.logoUrl,
-          corPrimaria: empresa.corPrimaria,
-          corSecundaria: empresa.corSecundaria,
-          corTextoPrimaria: empresa.corTextoPrimaria,
-          responsavel: empresa.responsavel,
-          telefone: empresa.telefone,
-          whatsapp: empresa.whatsapp,
-          email: empresa.email,
-          cnpj: empresa.cnpj,
-          crc: empresa.crc,
-          endereco: empresa.endereco,
-          site: empresa.site,
-          configProposta: empresa.configProposta,
-          configPrecos: empresa.configPrecos,
-          configDescontos: empresa.configDescontos,
-        } : null,
       };
     }),
   }),
 
-  // ─── Empresas / Tenants ─────────────────────────────────────────────────
-  empresa: router({
-    /** Listar todas as empresas (superadmin) */
-    list: superAdminProcedure.query(async () => {
-      return listEmpresas();
+  // ─── Configurações de Preços ─────────────────────────────────────────────
+  config: router({
+    /** Buscar configuração de preços atual */
+    getPrecos: internalProtectedProcedure.query(async () => {
+      return getConfigPrecos();
     }),
 
-    /** Buscar empresa por ID */
-    getById: internalProtectedProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input, ctx }) => {
-        const user = ctx.internalUser!;
-        // Apenas superadmin ou admin da própria empresa
-        if (user.role !== "superadmin" && user.empresaId !== input.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
-        }
-        return getEmpresaById(input.id);
-      }),
-
-    /** Criar nova empresa (superadmin) */
-    create: superAdminProcedure
+    /** Salvar configuração de preços (admin) */
+    savePrecos: internalAdminProcedure
       .input(z.object({
-        nome: z.string().min(2),
-        cnpj: z.string().optional(),
-        crc: z.string().optional(),
-        responsavel: z.string().optional(),
-        email: z.string().email().optional().or(z.literal("")),
-        telefone: z.string().optional(),
-        whatsapp: z.string().optional(),
-        endereco: z.string().optional(),
-        site: z.string().optional(),
-        corPrimaria: z.string().optional(),
-        corSecundaria: z.string().optional(),
-        corTextoPrimaria: z.string().optional(),
-        // Dados do usuário admin master da empresa
-        adminNome: z.string().min(2).optional(),
-        adminEmail: z.string().email().optional(),
-        adminSenha: z.string().min(6).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        // Normalizar email vazio para undefined
-        if (input.email === "") input.email = undefined;
-        const { adminNome, adminEmail, adminSenha, ...empresaData } = input;
-        const empresa = await createEmpresa(empresaData);
-
-        // Se dados do admin foram fornecidos, criar o usuário admin vinculado
-        if (adminNome && adminEmail && adminSenha && empresa) {
-          const existingUser = await getInternalUserByEmail(adminEmail);
-          if (existingUser) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: `Já existe um usuário com o e-mail ${adminEmail}`,
-            });
-          }
-          const passwordHash = await bcrypt.hash(adminSenha, 10);
-          await createInternalUser({
-            nome: adminNome,
-            email: adminEmail,
-            passwordHash,
-            role: "admin",
-            empresaId: empresa.id,
-          });
-        }
-
-        return empresa;
-      }),
-
-    /** Atualizar empresa (superadmin ou admin da empresa) */
-    update: internalAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        nome: z.string().min(2).optional(),
-        cnpj: z.string().nullable().optional(),
-        crc: z.string().nullable().optional(),
-        responsavel: z.string().nullable().optional(),
-        email: z.string().email().nullable().optional().or(z.literal("")),
-        telefone: z.string().nullable().optional(),
-        whatsapp: z.string().nullable().optional(),
-        endereco: z.string().nullable().optional(),
-        site: z.string().nullable().optional(),
-        corPrimaria: z.string().optional(),
-        corSecundaria: z.string().optional(),
-        corTextoPrimaria: z.string().optional(),
-        configProposta: z.any().optional(),
-        configPrecos: z.any().optional(),
-        configDescontos: z.any().optional(),
+        valorBase: z.number().min(0),
+        itensPreco: z.record(z.string(), z.number()),
       }))
       .mutation(async ({ input, ctx }) => {
-        const user = ctx.internalUser!;
-        if (user.role !== "superadmin" && user.empresaId !== input.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
-        }
-        // Normalizar email vazio para null
-        if (input.email === "") (input as any).email = null;
-        const { id, ...data } = input;
-        return updateEmpresa(id, data);
-      }),
-
-    /** Upload de logo da empresa */
-    uploadLogo: internalAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        fileBase64: z.string(),
-        fileName: z.string(),
-        mimeType: z.string(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const user = ctx.internalUser!;
-        if (user.role !== "superadmin" && user.empresaId !== input.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
-        }
-        const buffer = Buffer.from(input.fileBase64, "base64");
-        const suffix = nanoid(8);
-        const fileKey = `logos/${input.id}-${suffix}-${input.fileName}`;
-        const { url } = await storagePut(fileKey, buffer, input.mimeType);
-        return updateEmpresa(input.id, { logoUrl: url, logoKey: fileKey });
-      }),
-
-    /** Branding público - retorna dados visuais de uma empresa ativa (para login) */
-    branding: publicProcedure
-      .input(z.object({ empresaId: z.number().optional() }).optional())
-      .query(async ({ input }) => {
-        const empresasList = await listEmpresas();
-        const ativas = empresasList.filter((e: any) => e.ativo);
-        if (ativas.length === 0) return null;
-
-        // Se empresaId foi fornecido, buscar essa empresa específica
-        let ativa = input?.empresaId
-          ? ativas.find((e: any) => e.id === input.empresaId)
-          : null;
-
-        // Fallback: empresa com menor ID (primeira cadastrada = principal)
-        if (!ativa) {
-          ativa = ativas.reduce((a: any, b: any) => (a.id < b.id ? a : b));
-        }
-
-        return {
-          id: ativa.id,
-          nome: ativa.nome,
-          logoUrl: ativa.logoUrl,
-          corPrimaria: ativa.corPrimaria,
-          corSecundaria: ativa.corSecundaria,
-          corTextoPrimaria: ativa.corTextoPrimaria,
-          responsavel: ativa.responsavel,
-        };
-      }),
-
-    /** Lista pública de empresas ativas (para seletor no login) */
-    listPublic: publicProcedure.query(async () => {
-      const empresasList = await listEmpresas();
-      return empresasList
-        .filter((e: any) => e.ativo)
-        .map((e: any) => ({
-          id: e.id,
-          nome: e.nome,
-          logoUrl: e.logoUrl,
-          corPrimaria: e.corPrimaria,
-        }))
-        .sort((a: any, b: any) => a.id - b.id);
-    }),
-
-    /** Desativar empresa (superadmin) */
-    delete: superAdminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        return deleteEmpresa(input.id);
+        return upsertConfigPrecos({
+          valorBase: input.valorBase,
+          itensPreco: input.itensPreco,
+          updatedBy: ctx.internalUser!.id,
+        });
       }),
   }),
 
@@ -367,22 +154,8 @@ export const appRouter = router({
       return listOrcamentosByUser(ctx.internalUser!.id);
     }),
 
-    /** Listar orçamentos da empresa (admin da empresa) */
-    listByEmpresa: internalAdminProcedure
-      .input(z.object({ userId: z.number().optional() }).optional())
-      .query(async ({ input, ctx }) => {
-        const user = ctx.internalUser!;
-        if (user.role === "superadmin") {
-          return listAllOrcamentos(input?.userId);
-        }
-        if (user.empresaId) {
-          return listOrcamentosByEmpresa(user.empresaId, input?.userId);
-        }
-        return listOrcamentosByUser(user.id);
-      }),
-
-    /** Listar TODOS os orçamentos (somente superadmin) */
-    listAll: superAdminProcedure
+    /** Listar TODOS os orçamentos (admin) */
+    listAll: internalAdminProcedure
       .input(z.object({ userId: z.number().optional() }).optional())
       .query(async ({ input }) => {
         return listAllOrcamentos(input?.userId);
@@ -395,10 +168,8 @@ export const appRouter = router({
         const orc = await getOrcamentoById(input.id);
         if (!orc) return null;
         const user = ctx.internalUser!;
-        // superadmin vê tudo
-        if (user.role === "superadmin") return orc;
-        // admin da empresa vê orçamentos da empresa
-        if (user.role === "admin" && user.empresaId && orc.empresaId === user.empresaId) return orc;
+        // admin vê tudo
+        if (user.role === "admin") return orc;
         // usuário vê apenas os seus
         if (orc.criadoPor !== user.id) return null;
         return orc;
@@ -429,7 +200,6 @@ export const appRouter = router({
           valorFinal: String(input.valorFinal),
           observacoes: input.observacoes ?? null,
           criadoPor: ctx.internalUser!.id,
-          empresaId: ctx.internalUser!.empresaId ?? null,
         });
       }),
 
@@ -443,10 +213,7 @@ export const appRouter = router({
         const orc = await getOrcamentoById(input.id);
         if (!orc) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
         const user = ctx.internalUser!;
-        if (user.role !== "superadmin" && user.role !== "admin" && orc.criadoPor !== user.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
-        }
-        if (user.role === "admin" && user.empresaId && orc.empresaId !== user.empresaId) {
+        if (user.role !== "admin" && orc.criadoPor !== user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
         }
         return updateOrcamentoStatus(input.id, input.status);
@@ -464,7 +231,7 @@ export const appRouter = router({
         const orc = await getOrcamentoById(input.id);
         if (!orc) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
         const user = ctx.internalUser!;
-        if (user.role !== "superadmin" && user.role !== "admin" && orc.criadoPor !== user.id) {
+        if (user.role !== "admin" && orc.criadoPor !== user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
         }
         const buffer = Buffer.from(input.fileBase64, "base64");
@@ -481,7 +248,7 @@ export const appRouter = router({
         const orc = await getOrcamentoById(input.id);
         if (!orc) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
         const user = ctx.internalUser!;
-        if (user.role !== "superadmin" && user.role !== "admin" && orc.criadoPor !== user.id) {
+        if (user.role !== "admin" && orc.criadoPor !== user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
         }
         return updateOrcamentoObservacoes(input.id, input.observacoes);
@@ -494,32 +261,18 @@ export const appRouter = router({
         const orc = await getOrcamentoById(input.id);
         if (!orc) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
         const user = ctx.internalUser!;
-        if (user.role !== "superadmin" && user.role !== "admin" && orc.criadoPor !== user.id) {
+        if (user.role !== "admin" && orc.criadoPor !== user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão" });
         }
         return deleteOrcamento(input.id);
       }),
   }),
 
-  // ─── Gerenciamento de usuários (admin da empresa ou superadmin) ─────────
+  // ─── Gerenciamento de usuários (admin) ───────────────────────────────────
   usuario: router({
-    /** Listar usuários de uma empresa específica (superadmin) */
-    listByEmpresa: superAdminProcedure
-      .input(z.object({ empresaId: z.number() }))
-      .query(async ({ input }) => {
-        return listInternalUsersByEmpresa(input.empresaId);
-      }),
-
-    /** Listar usuários (admin vê da empresa, superadmin vê todos) */
-    list: internalAdminProcedure.query(async ({ ctx }) => {
-      const user = ctx.internalUser!;
-      if (user.role === "superadmin") {
-        return listInternalUsers();
-      }
-      if (user.empresaId) {
-        return listInternalUsersByEmpresa(user.empresaId);
-      }
-      return [];
+    /** Listar todos os usuários */
+    list: internalAdminProcedure.query(async () => {
+      return listInternalUsers();
     }),
 
     /** Criar novo usuário */
@@ -529,28 +282,18 @@ export const appRouter = router({
         email: z.string().email(),
         senha: z.string().min(6),
         role: z.enum(["user", "admin"]).default("user"),
-        empresaId: z.number().optional(),
       }))
-      .mutation(async ({ input, ctx }) => {
+      .mutation(async ({ input }) => {
         const existing = await getInternalUserByEmail(input.email);
         if (existing) {
           throw new TRPCError({ code: "CONFLICT", message: "E-mail já cadastrado" });
         }
-        const user = ctx.internalUser!;
         const passwordHash = await bcrypt.hash(input.senha, 12);
-
-        // Admin da empresa só pode criar usuários na sua empresa
-        let empresaId = input.empresaId ?? null;
-        if (user.role === "admin" && user.empresaId) {
-          empresaId = user.empresaId;
-        }
-
         return createInternalUser({
           nome: input.nome,
           email: input.email,
           passwordHash,
           role: input.role,
-          empresaId,
         });
       }),
 
@@ -563,17 +306,12 @@ export const appRouter = router({
         novaSenha: z.string().min(6).optional(),
         role: z.enum(["user", "admin"]).optional(),
         ativo: z.boolean().optional(),
-        empresaId: z.number().nullable().optional(),
       }))
-      .mutation(async ({ input, ctx }) => {
-        const { id, novaSenha, empresaId, ...rest } = input;
+      .mutation(async ({ input }) => {
+        const { id, novaSenha, ...rest } = input;
         const updateData: Parameters<typeof updateInternalUser>[1] = { ...rest };
         if (novaSenha) {
           updateData.passwordHash = await bcrypt.hash(novaSenha, 12);
-        }
-        // Superadmin pode mudar empresaId
-        if (ctx.internalUser!.role === "superadmin" && empresaId !== undefined) {
-          updateData.empresaId = empresaId;
         }
         return updateInternalUser(id, updateData);
       }),
@@ -595,6 +333,7 @@ export const appRouter = router({
         return updateInternalUser(input.id, { passwordHash });
       }),
   }),
+
 });
 
 export type AppRouter = typeof appRouter;

@@ -18,7 +18,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import { useIRPFCalculator } from "@/hooks/useIRPFCalculator";
 
 export default function Home() {
-  const { user, logout, empresa } = useInternalAuth();
+  const { user, logout } = useInternalAuth();
   const [, navigate] = useLocation();
 
   const {
@@ -48,10 +48,10 @@ export default function Home() {
   const [showProposal, setShowProposal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const corPrimaria = empresa?.corPrimaria || "#F97316";
-  const corSecundaria = empresa?.corSecundaria || "#FB923C";
-  const empresaNome = empresa?.nome || "Calculadora IRPF";
-  const responsavel = empresa?.responsavel || "";
+  const corPrimaria = "#F97316";
+  const corSecundaria = "#FB923C";
+  const empresaNome = "Numer Contabilidade";
+  const responsavel = "Higor Araujo";
 
   const createMutation = trpc.orcamento.create.useMutation({
     onSuccess: () => {
@@ -126,7 +126,6 @@ export default function Home() {
         resultado={resultado}
         valorFinal={valorFinal}
         propostaConfig={propostaConfig}
-        empresa={empresa}
         onBack={() => setShowProposal(false)}
       />
     );
@@ -141,7 +140,6 @@ export default function Home() {
         userName={user?.nome}
         userRole={user?.role}
         onLogout={handleLogout}
-        empresa={empresa}
       />
 
       {/* Settings Panel */}

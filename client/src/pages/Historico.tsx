@@ -144,7 +144,7 @@ function buildProposalData(orc: any): {
 }
 
 export default function Historico() {
-  const { user, isAuthenticated, isAdmin: isAdminRole, isSuperAdmin, empresa } = useInternalAuth();
+  const { user, isAuthenticated, isAdmin: isAdminRole } = useInternalAuth();
   const [, navigate] = useLocation();
   const [filter, setFilter] = useState<StatusFilter>("todos");
   const [searchTerm, setSearchTerm] = useState("");
@@ -157,36 +157,22 @@ export default function Historico() {
   const isAdmin = isAdminRole;
   const utils = trpc.useUtils();
 
-  // Logo e nome da empresa
-  const logoUrl = empresa?.logoUrl || "";
-  const empresaNome = empresa?.nome || "Calculadora IRPF";
+  const empresaNome = "Numer Contabilidade";
+  const logoUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663390991773/hrYkQ7rTK4s8DYQBoB2Kee/NUMER_Logo_01_aa953856.png";
 
-  // Superadmin usa listAll, admin da empresa usa listByEmpresa, usuário comum usa list
-  const { data: superAdminOrcamentos, isLoading: isLoadingSuperAdmin } =
+  // Admin usa listAll, usuário comum usa list
+  const { data: adminOrcamentos, isLoading: isLoadingAdmin } =
     trpc.orcamento.listAll.useQuery(undefined, {
-      enabled: isAuthenticated && isSuperAdmin,
-    });
-
-  const { data: empresaOrcamentos, isLoading: isLoadingEmpresa } =
-    trpc.orcamento.listByEmpresa.useQuery(undefined, {
-      enabled: isAuthenticated && isAdmin && !isSuperAdmin,
+      enabled: isAuthenticated && isAdminRole,
     });
 
   const { data: userOrcamentos, isLoading: isLoadingUser } =
     trpc.orcamento.list.useQuery(undefined, {
-      enabled: isAuthenticated && !isAdmin,
+      enabled: isAuthenticated && !isAdminRole,
     });
 
-  const orcamentos = isSuperAdmin
-    ? superAdminOrcamentos
-    : isAdmin
-    ? empresaOrcamentos
-    : userOrcamentos;
-  const isLoading = isSuperAdmin
-    ? isLoadingSuperAdmin
-    : isAdmin
-    ? isLoadingEmpresa
-    : isLoadingUser;
+  const orcamentos = isAdminRole ? adminOrcamentos : userOrcamentos;
+  const isLoading = isAdminRole ? isLoadingAdmin : isLoadingUser;
 
   // Lista de criadores únicos (para admin)
   const creators = useMemo(() => {
@@ -201,8 +187,7 @@ export default function Historico() {
   }, [isAdmin, orcamentos]);
 
   const invalidateAll = () => {
-    if (isSuperAdmin) utils.orcamento.listAll.invalidate();
-    else if (isAdmin) utils.orcamento.listByEmpresa.invalidate();
+    if (isAdmin) utils.orcamento.listAll.invalidate();
     else utils.orcamento.list.invalidate();
   };
 
@@ -299,11 +284,11 @@ export default function Historico() {
     concluidos: orcamentos?.filter((o) => o.status === "concluido").length ?? 0,
     cancelados: orcamentos?.filter((o) => o.status === "cancelado").length ?? 0,
     valorTotal:
-      orcamentos?.reduce((sum, o) => sum + parseFloat(o.valorFinal), 0) ?? 0,
+      orcamentos?.reduce((sum: number, o: any) => sum + parseFloat(o.valorFinal), 0) ?? 0,
     valorConcluidos:
       orcamentos
-        ?.filter((o) => o.status === "concluido")
-        .reduce((sum, o) => sum + parseFloat(o.valorFinal), 0) ?? 0,
+        ?.filter((o: any) => o.status === "concluido")
+        .reduce((sum: number, o: any) => sum + parseFloat(o.valorFinal), 0) ?? 0,
   };
 
   if (!isAuthenticated) {
@@ -327,7 +312,6 @@ export default function Historico() {
         clientData={clientData}
         resultado={resultado}
         valorFinal={valorFinal}
-        empresa={empresa}
         onBack={() => setProposalOrc(null)}
       />
     );
@@ -372,9 +356,7 @@ export default function Historico() {
                 {isAdmin && (
                   <p className="text-[10px] text-empresa font-medium flex items-center gap-1 -mt-0.5">
                     <ShieldCheck className="w-3 h-3" />
-                    {isSuperAdmin
-                      ? "Visualizando todos os orçamentos (Super Admin)"
-                      : `Visualizando orçamentos de ${empresaNome}`}
+                    {`Visualizando orçamentos de ${empresaNome}`}
                   </p>
                 )}
               </div>
@@ -506,7 +488,7 @@ export default function Historico() {
         {/* Orçamentos list */}
         <div className="space-y-3">
           <AnimatePresence mode="popLayout">
-            {filtered.map((orc) => {
+            {filtered.map((orc: any) => {
               const status = statusConfig[orc.status] ?? statusConfig.pendente;
               const resultado = orc.resultado as any;
               const criadorNome = (orc as any).criadorNome;
