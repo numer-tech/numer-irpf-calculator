@@ -1,6 +1,6 @@
 CREATE TABLE `configPrecos` (
 	`id` int AUTO_INCREMENT NOT NULL,
-	`valorBase` decimal(10,2) NOT NULL DEFAULT '150.00',
+	`valorBase` decimal(10,2) NOT NULL DEFAULT '120.00',
 	`itensPreco` json NOT NULL,
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`updatedBy` int,
