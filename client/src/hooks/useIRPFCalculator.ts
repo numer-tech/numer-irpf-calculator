@@ -111,7 +111,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     key: "rendTribPJ",
     label: "Rend. Trib. Receb. de PJ",
     labelCompleto: "Rend. Trib. Receb. de Pessoa Jurídica",
-    precoUnitario: 15,
+    precoUnitario: 20,
     descricaoUnidade: "por informe",
     grupo: "Rendimentos Tributáveis",
   },
@@ -127,7 +127,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     key: "rendExigibilidadeSuspensa",
     label: "Rend. Trib. de PJ (Exig. Suspensa)",
     labelCompleto: "Rendimentos Tributáveis de PJ (Imposto com Exigibilidade Suspensa)",
-    precoUnitario: 25,
+    precoUnitario: 20,
     descricaoUnidade: "por processo",
     grupo: "Rendimentos Tributáveis",
   },
@@ -135,7 +135,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     key: "rendRecebidosAcumuladamente",
     label: "Rendimentos Recebidos Acumuladamente",
     labelCompleto: "Rendimentos Recebidos Acumuladamente (RRA)",
-    precoUnitario: 30,
+    precoUnitario: 20,
     descricaoUnidade: "por processo",
     grupo: "Rendimentos Tributáveis",
   },
@@ -167,7 +167,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     key: "pagamentosEfetuados",
     label: "Pagamentos Efetuados",
     labelCompleto: "Pagamentos Efetuados (médicos, educação, pensão, etc.)",
-    precoUnitario: 8,
+    precoUnitario: 10,
     descricaoUnidade: "por lançamento",
     grupo: "Imposto e Pagamentos",
   },
@@ -215,7 +215,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
     key: "dividasOnus",
     label: "Dívidas e Ônus Reais",
     labelCompleto: "Dívidas e Ônus Reais",
-    precoUnitario: 10,
+    precoUnitario: 15,
     descricaoUnidade: "por dívida",
     grupo: "Bens, Dívidas e Situações Especiais",
   },
@@ -229,7 +229,7 @@ export const defaultItensPreco: ItemPrecoConfig[] = [
   },
 ];
 
-export const DEFAULT_VALOR_BASE = 150;
+export const DEFAULT_VALOR_BASE = 120;
 
 // ─── Descontos padrão ───
 export const defaultDescontos: DescontoConfig[] = [
